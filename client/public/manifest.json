@@ -1,0 +1,20 @@
+{
+  "short_name": "Whisper Living",
+  "name": "Web de simulación de casa domótica",
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "671x671"
+    },
+    {
+      "src": "CabeceraPWTFG.png",
+      "type": "image/png",
+      "sizes": "1379x369"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

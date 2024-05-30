@@ -1,0 +1,76 @@
+/* Estilos generales */
+body {
+    background-color: #f5f5f5;
+}
+
+.login-container,
+.register-container {
+    position: absolute;
+    margin: auto;
+    left: 30%;
+}
+
+.login-form-container,
+.register-form-container {
+    display: flexbox;
+    width: 300px;
+    padding: 60px;
+    border: 0px solid #f5f5f5;
+    background-color: #f5f5f5;
+}
+
+.login-form h1,
+.register-form h1 {
+    margin-bottom: 20px;
+}
+
+.login-form .form-group,
+.register-form .form-group {
+    margin-bottom: 20px;
+}
+
+.login-form label,
+.register-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"],
+.register-form input[type="text"],
+.register-form input[type="password"],
+.register-form input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.login-form button,
+.login-form-container button,
+.register-form button,
+.register-form-container button {
+    width: 50%;
+    padding: 10px;
+    background-color: rgb(0, 110, 255);
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    margin-top: 15px;
+    grid: flex;
+}
+
+.login-form button:hover,
+.login-form-container button:hover {
+    background-color: darkblue;
+}
+
+.login-form p,
+.register-form p {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+    color: red;
+}
