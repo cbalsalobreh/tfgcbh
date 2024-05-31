@@ -22,7 +22,8 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS habitaciones (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         nombre TEXT NOT NULL UNIQUE,
-                        tipo INTEGER NOT NULL)''')
+                        tipo_id INTEGER NOT NULL,
+                        FOREIGN KEY (tipo_id) REFERENCES tipos_habitaciones(id))''')
 
     # Dispositivos table
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispositivos (
@@ -30,7 +31,7 @@ def init_db():
                         nombre TEXT NOT NULL UNIQUE,
                         tipo TEXT NOT NULL,
                         habitacion_id INTEGER,
-                        estado TEXT NOT NULL,
+                        estado TEXT,
                         FOREIGN KEY (habitacion_id) REFERENCES habitaciones(id))''')
 
     # Relationship between users and habitaciones (many-to-many)
@@ -51,7 +52,16 @@ def init_db():
                         PRIMARY KEY (id_dispositivo, id_comando),
                         FOREIGN KEY (id_dispositivo) REFERENCES dispositivos(id),
                         FOREIGN KEY (id_comando) REFERENCES comandos(id))''')
-
+    
+    cursor.execute('''CREATE TABLE tipos_habitaciones (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre TEXT NOT NULL UNIQUE''')
+    
+    cursor.execute('''CREATE TABLE tipos_dispositivos (    
+                        id INTEGER PRIMARY KEY,    
+                        nombre TEXT NOT NULL,    
+                        tipo_habitacion_id INTEGER,    
+                        FOREIGN KEY (tipo_habitacion_id) REFERENCES tipos_habitaciones(id))''')
     conn.commit()
     conn.close()
 

@@ -327,6 +327,9 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Flask Session Cache
+flask_session/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
