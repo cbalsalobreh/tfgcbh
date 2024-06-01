@@ -1,0 +1,108 @@
+body {
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .container {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+    margin: 20px;
+  }
+  
+  h2, h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  p {
+    color: #666;
+    line-height: 1.6;
+  }
+  
+  .volver-button{
+    background-color: gray;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button {
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .volver-button {
+    margin-bottom: 1rem;
+  }
+
+  .volver-button:hover {
+    background-color: #666;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  input[type="password"] {
+    width: 200px;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  button + input {
+    margin-top: 0;
+  }
+  
+  button + p {
+    margin-top: 0.5rem;
+    color: red;
+  }
+  
+  button:last-of-type {
+    margin-top: 10px;
+  }
+  
+  @media (max-width: 600px) {
+    .container {
+      padding: 1rem;
+      margin: 10px;
+    }
+  
+    h2, h3 {
+      font-size: 1.5rem;
+    }
+  
+    p {
+      font-size: 0.9rem;
+    }
+  
+    input[type="password"] {
+      font-size: 6px;
+    }
+  
+    button {
+      font-size: 0.9rem;
+      padding: 8px 16px;
+    }
+  }
+  

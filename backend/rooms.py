@@ -42,6 +42,20 @@ class RoomManager:
             return []
         finally:
             cursor.close()
+    
+    def delete_habitacion_id(self, id):
+        self.conn = sqlite3.connect(self.db_file)
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("DELETE FROM dispositivos WHERE habitacion_id = ?", (id,))
+            cursor.execute("DELETE FROM usuarios_habitaciones WHERE id_habitacion = ?", (id,))
+            cursor.execute("DELETE FROM habitaciones WHERE id = ?", (id,))
+            self.conn.commit()
+        except Exception as e:
+            print("Error deleting room:", e)
+            self.conn.rollback()
+        finally:
+            cursor.close()
 
     def update_habitacion(self, usuario_id, nombre_actual, nuevo_nombre):
         self.conn = sqlite3.connect(self.db_file)

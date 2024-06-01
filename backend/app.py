@@ -33,7 +33,7 @@ room_manager = RoomManager(db_path)
 command_manager = CommandManager('db/database.db')
 text_analyzer = TextAnalyzer('db/database.db')
 
-# SocketIO Event Handlers
+# Servidor WebSockets
 @socketio.on('connect')
 def handle_connect():
     try:
@@ -56,8 +56,6 @@ def get_user_id_from_token(token):
         print(f"Error al decodificar el token JWT: {e}")
         return None
 
-from flask import request
-
 def obtener_token_de_la_solicitud():
     # Obtener el token de autorización de la cabecera de la solicitud
     token = request.headers.get('Authorization')
@@ -67,7 +65,6 @@ def obtener_token_de_la_solicitud():
         if len(token_parts) == 2:
             return token_parts[1]  # Devolver solo el token sin 'Bearer'
     return None  # Devolver None si no se proporcionó un token
-
 
 @socketio.on('audio')
 @jwt_required()
@@ -148,6 +145,7 @@ def index():
     session['csrf_token'] = csrf_token
     return jsonify({'csrf_token': csrf_token})
 
+# Gestión de Autentificación
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -172,15 +170,31 @@ def register():
     db_manager.save_user_to_database(username, email, password)
     return jsonify({'message': 'Registro exitoso'}) 
 
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logout exitoso'})
+
+@app.route('/change_password', methods=['POST'])
+@jwt_required()
+def change_password_route():
+    data = request.json
+    new_password = data.get('newPassword')
+    user_id = get_jwt_identity()
+    if user_id:
+        db_manager.change_password(user_id, new_password)
+        return jsonify({'message': 'Contraseña cambiada exitosamente'})
+    else:
+        return jsonify({'message': 'Usuario no autenticado'}), 401
+
+# Gestión de usuario
 @app.route('/casa-domotica', methods=['GET', 'POST'])
 @jwt_required()
 @cross_origin()
 def manejar_habitaciones():
     try:
         usuario_id = get_jwt_identity()
-        print(usuario_id)
         if request.method == 'POST':
-            print('POST')
             nombre = request.json.get('nombre')
             tipo = request.json.get('tipo')
             if not nombre or not tipo:
@@ -188,9 +202,7 @@ def manejar_habitaciones():
             room_manager.add_habitacion(nombre, tipo, usuario_id)
             return jsonify({'mensaje': 'Habitación añadida'})
         else:
-            print('GET')
             habitaciones = room_manager.get_habitaciones(usuario_id)
-            print('GET con éxito')
             return jsonify(habitaciones)
     except Exception as e:
         print(f"Error en /casa-domotica: {e}")
@@ -212,6 +224,17 @@ def manejar_habitacion(nombre):
             return jsonify({'habitacion': habitacion, 'dispositivos': dispositivos})
         else:
             return jsonify({'mensaje': 'Habitación no encontrada'}), 404
+
+
+@app.route('/<id_habitacion>', methods=['DELETE'])
+def borrar_habitacion(id_habitacion):
+    try:
+        room_manager.delete_habitacion_id(id_habitacion)
+        return jsonify({'mensaje': 'Habitación eliminada'}), 200
+    except Exception as e:
+        print("Error inesperado:", e)
+        return jsonify({'error': 'Error inesperado'}), 500
+
         
 @app.route('/casa-domotica/<nombre>', methods=['PUT'])
 @jwt_required()
@@ -219,18 +242,14 @@ def manejar_habitacion(nombre):
 def cambiar_nombre_habitacion(nombre):
     try:
         usuario_id = get_jwt_identity()
-        print(usuario_id)
-        print(nombre)
         nuevo_nombre = request.json.get('nuevo_nombre')
         if not nuevo_nombre:
             return jsonify({'mensaje': 'El nuevo nombre de la habitación es necesario'}), 400
-
         if room_manager.update_habitacion(usuario_id, nombre, nuevo_nombre):
             return jsonify({'mensaje': f'Nombre de la habitación {nombre} cambiado a {nuevo_nombre}'}), 200
         else:
             return jsonify({'mensaje': 'No se pudo cambiar el nombre de la habitación. Verifique que tiene acceso a la habitación y que el nuevo nombre no esté ya en uso.'}), 400
     except Exception as e:
-        print(f"Error al cambiar el nombre de la habitación: {e}")
         return jsonify({'error': 'Ocurrió un error al cambiar el nombre de la habitación'}), 500
         
 @app.route('/tipos-habitaciones', methods=['GET'])
@@ -243,19 +262,6 @@ def obtener_tipos_habitaciones():
             return jsonify({'error': 'No se pudieron obtener los tipos de habitaciones'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/tipos-habitaciones/<nombre>/dispositivos', methods=['GET'])
-def obtener_dispositivos_predeterminados(nombre):
-    try:
-        tipo_id = db_manager.get_tipo_id(nombre)
-        if tipo_id is None:
-            return jsonify({'error': 'Tipo de habitación no encontrado'}), 404
-        
-        dispositivos = db_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
-        return jsonify({'dispositivos': dispositivos}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @app.route('/tipos-habitaciones', methods=['POST'])
 def agregar_tipo_habitacion():
@@ -276,14 +282,41 @@ def obtener_tipo_habitacion(tipo_nombre):
         else:
             return jsonify({'mensaje': 'Tipo de habitación no encontrado'}), 404
     except Exception as e:
-        print(f"Error al obtener el tipo de habitación: {e}")
         return jsonify({'error': 'Ocurrió un error al obtener el tipo de habitación'}), 500
+    
+@app.route('/tipos-habitaciones/<nombre>/dispositivos', methods=['GET'])
+def obtener_dispositivos_predeterminados(nombre):
+    try:
+        tipo_id = db_manager.get_tipo_id(nombre)
+        if tipo_id is None:
+            return jsonify({'error': 'Tipo de habitación no encontrado'}), 404
+        
+        dispositivos = db_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
+        return jsonify({'dispositivos': dispositivos}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/get_user_data', methods=['GET'])
+@jwt_required()
+def get_username():
+    user_id = get_jwt_identity()
+    username = db_manager.get_username_with_id(user_id)
+    if username:
+        return jsonify({'username': username})
+    else:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
 
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.clear()
-    return jsonify({'message': 'Logout exitoso'})
-
+@app.route('/usuario/<username>', methods=['GET'])
+@jwt_required()
+@cross_origin()
+def get_user_data(username):
+    user_data = db_manager.get_user_data(username)
+    if user_data:
+        return jsonify(user_data)
+    else:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+    
+# Gestión de dispositivos
 @app.route('/casa-domotica/<nombre>/dispositivos', methods=['POST'])
 @jwt_required()
 @cross_origin()
@@ -322,18 +355,7 @@ def actualizar_estado():
     else:
         return jsonify({"error": "Error al actualizar el estado"}), 500
 
-
-@app.route('/change_password', methods=['POST'])
-def change_password_route():
-    data = request.json
-    new_password = data.get('newPassword')
-    username = session.get('username')
-    if username:
-        db_manager.change_password(username, new_password)
-        return jsonify({'message': 'Contraseña cambiada exitosamente'})
-    else:
-        return jsonify({'message': 'Usuario no autenticado'}), 401
-
+# Gestión de comandos
 @app.route('/comando', methods=['POST'])
 def manejar_comando():
     comando = request.json.get('comando')

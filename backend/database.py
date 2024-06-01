@@ -15,7 +15,6 @@ class DatabaseManager:
                 cursor.execute(query)
             self.conn.commit()
             result = cursor.fetchall()
-            print(result)
             cursor.close()
             return result
         except sqlite3.Error as e:
@@ -24,7 +23,6 @@ class DatabaseManager:
         finally:
             if self.conn:
                 self.conn.close()
-                print("Database connection closed.")
 
 
     def save_user_to_database(self, username, email, password):
@@ -44,10 +42,16 @@ class DatabaseManager:
         query = "SELECT id FROM users WHERE username = ?"
         result = self.execute_query(query, (username,))
         return result[0][0] if result else None
+    
+    def get_username_with_id(self, user_id):
+        query = "SELECT username FROM users WHERE id = ?"
+        result = self.execute_query(query, (user_id,))
+        return result[0][0] if result else None
 
-    def change_password(self, username, new_password):
-        query = "UPDATE users SET password = ? WHERE username = ?"
-        self.execute_query(query, (new_password, username))
+
+    def change_password(self, user_id, new_password):
+        query = "UPDATE users SET password = ? WHERE id = ?"
+        self.execute_query(query, (new_password, user_id))
 
     def get_tipo_id(self, tipo_nombre):
         query = "SELECT id FROM tipos_habitaciones WHERE nombre = ?"

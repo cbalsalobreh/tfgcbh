@@ -5,7 +5,7 @@ import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import CasaDomotica from './CasaDomotica';
 import Habitacion from './Habitacion';
-
+import Usuario from './Usuario';
 
 function App() {
   return (
@@ -17,6 +17,7 @@ function App() {
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/casa-domotica" element={<CasaDomotica />}/>
             <Route path="/casa-domotica/:nombre" element={<Habitacion />} />
+            <Route path="/usuario/:username" element={<Usuario />} />
           </Routes>
         </BrowserRouter>
     </div>

@@ -19,7 +19,7 @@ function CasaDomotica() {
     const [dispositivo, setDispositivo] = useState('');
     const [estado, setEstado] = useState('');
     const [habitacion, setHabitacion] = useState('');
-
+    const [username, setUsername ] = useState('');
 
     const [habitaciones, setHabitaciones] = useState([]);
     const [tiposHabitaciones, setTiposHabitaciones] = useState([]);
@@ -35,6 +35,35 @@ function CasaDomotica() {
     useEffect(() => {
         cargarHabitaciones();
         cargarTiposHabitaciones();
+    }, []);
+
+    useEffect(() => {
+        async function fetchUserData() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error('Token no encontrado');
+                    return;
+                }
+                
+                const response = await fetch('/get_user_data', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    setUsername(userData.username);
+                } else {
+                    console.error('Error al obtener los datos del usuario');
+                }
+            } catch (error) {
+                console.error('Error al obtener los datos del usuario:', error);
+            }
+        }
+        fetchUserData();
     }, []);
 
     useEffect(() => {
@@ -198,7 +227,25 @@ function CasaDomotica() {
         } catch (error) {
             console.error('Error al actualizar habitación', error);
         }
-    }       
+    }
+    
+    const handleEliminarHabitacion = async (id) => {
+        try {
+            const response = await fetch(`http://localhost:5001/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (response.ok) {
+                cargarHabitaciones();
+            } else {
+                console.error('Error al eliminar la habitación');
+            }
+        } catch (error) {
+            console.error('Error al eliminar la habitación:', error);
+        }
+    };
 
     const handleAgregarClick = () => {
         setMostrarFormulario(true);
@@ -259,7 +306,7 @@ function CasaDomotica() {
     return (
         <div className="casadomotica-container">
             <header className="header">
-                <h5>Bienvenido a las habitaciones de tu casa domótica</h5>
+                <h5>Bienvenido <a href={`/usuario/${username}`}>@{username}</a> a las habitaciones de tu casa domótica</h5>
                 <button onClick={handleLogout} className="logout-button">Cerrar Sesión</button>
             </header>
             <ul className="habitaciones-list">
@@ -280,6 +327,7 @@ function CasaDomotica() {
                                 <>
                                     <button onClick={() => handleHabitacionClick(habitacion.nombre)}>{habitacion.nombre}</button>
                                     <button onClick={() => handleEditarClick(habitacion.id, habitacion.nombre)} className="editar-button">Editar</button>
+                                    <button onClick={() => handleEliminarHabitacion(habitacion.id)} className="delete-button">Eliminar</button>
                                 </>
                             )}
                         </li>
