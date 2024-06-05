@@ -147,9 +147,33 @@ class RoomManager:
         finally:
             cursor.close()
 
+    def actualizar_nombre_dispositivo(self, usuario_id, nombre_habitacion, dispositivo_id, nuevo_nombre):
+        self.conn = sqlite3.connect(self.db_file)
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT d.id
+                FROM dispositivos d
+                JOIN habitaciones h ON d.habitacion_id = h.id
+                JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
+                WHERE d.id = ? AND h.nombre = ? AND uh.id_usuario = ?
+            """, (dispositivo_id, nombre_habitacion, usuario_id))
+            dispositivo_existente = cursor.fetchone()
+            if dispositivo_existente:
+                cursor.execute("UPDATE dispositivos SET nombre = ? WHERE id = ?", (nuevo_nombre, dispositivo_id))
+                self.conn.commit()
+                return True
+            else:
+                return False
+        except Exception as e:
+            print("Error updating device name:", e)
+            return False
+        finally:
+            cursor.close()
+
     def eliminar_dispositivo(self, dispositivo_id):
         self.conn = sqlite3.connect(self.db_file)
-        cursor = self.self.conn.cursor()
+        cursor = self.conn.cursor()
         try:
             cursor.execute("DELETE FROM dispositivos WHERE id = ?", (dispositivo_id,))
             self.conn.commit()
@@ -173,17 +197,5 @@ class RoomManager:
         except Exception as e:
             print("Error getting device status:", e)
             return None
-        finally:
-            cursor.close()
-
-    def update_device_state(self, dispositivo, accion):
-        self.conn = sqlite3.connect(self.db_file)
-        cursor = self.conn.cursor()
-        try:
-            if accion:
-                cursor.execute("UPDATE dispositivos SET estado = ? WHERE nombre = ?", (accion, dispositivo))
-                self.conn.commit()
-        except Exception as e:
-            print("Error updating device state:", e)
         finally:
             cursor.close()

@@ -28,10 +28,39 @@
     margin-bottom: 10px;
     background-color: #f9f9f9;
     border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.habitacion-container ul li span {
+    justify-content: space-between;
+    margin-left: 50px;
+    margin-right: 5px;
+}
+
+.habitacion-container ul li button {
+    justify-content: space-between;
+    padding: 10px;
+    font-size: 16px;
+    width: 100px;
+    height: 35px;
+    margin-right: 10px;
+}
+
+.habitacion-container ul li button.delete2-button {
+    background-color: #e74c3c;
+    margin-bottom: 9px;
+}
+
+.habitacion-container ul li button.delete2-button:hover {
+    background-color: #c0392b;
+}
+
+.habitacion-container ul li button.editar-button {
+    background-color: lightgray;
+}
+
+.habitacion-container ul li button.editar-button:hover {
+    background-color: grey;
 }
 
 .habitacion-container ul li span {
@@ -53,20 +82,6 @@
 }
 
 .habitacion-container .delete-button:hover {
-    background-color: #c0392b;
-}
-
-.habitacion-container .delete2-button {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.habitacion-container .delete2-button:hover {
     background-color: #c0392b;
 }
 
@@ -145,11 +160,37 @@
 
 .habitacion-container .nueva-dispositivo-form .cancelar-button {
     background-color: #e74c3c;
+    margin-top: 1px;
 }
 
 .habitacion-container .nueva-dispositivo-form .cancelar-button:hover {
     background-color: #c0392b;
 }
+
+.habitacion-container .editar-dispositivo-form input{
+    height: 28px;
+    margin-right: 3px;
+    width: 45%;
+}
+
+.habitacion-container .editar-dispositivo-form button {
+    background-color: #f4a261; /* Mustard yellow */
+    color: white;
+    margin-left: 8px;
+    width: 24%;
+}
+
+.habitacion-container .editar-dispositivo-form button:hover {
+    background-color: #e59500; /* Darker mustard yellow */
+}
+
+.habitacion-container .agregar-comando-button,
+.habitacion-container .cerrar-button {
+    height: auto;
+    margin-left: 10px;
+    width: auto;
+}
+
 
 /* Responsivo */
 @media (max-width: 768px) {
@@ -165,6 +206,13 @@
     .habitacion-container ul li button {
         width: 100%;
         margin-top: 10px;
+        margin-left: 0;
+    }
+
+    .habitacion-container ul li .buttons {
+        width: 100%;
+        margin-top: 10px;
+        justify-content: flex-start;
     }
 
     .habitacion-container .nueva-dispositivo-form input,

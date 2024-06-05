@@ -19,6 +19,13 @@ function Habitacion() {
     const [tipoDispositivo, setTipoDispositivo] = useState('');
     const [dispositivosPredeterminados, setDispositivosPredeterminados] = useState([]);
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
+    const [editarDispositivoId, setEditarDispositivoId] = useState('');
+    const [nuevoNombreDispositivo, setNuevoNombreDispositivo] = useState('');
+    const [comandos, setComandos] = useState([]);
+    const [mostrarFormularioComando, setMostrarFormularioComando] = useState(false);
+    const [nuevoComando, setNuevoComando] = useState("");
+    const [dispositivoSeleccionado, setDispositivoSeleccionado] = useState(null);
+
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -48,7 +55,6 @@ function Habitacion() {
 
         const cargarDispositivosPredeterminados = async (tipoHabitacion) => {
             try {
-                console.log(`Cargando dispositivos predeterminados para tipo: ${tipoHabitacion}`);
                 const response = await fetch(`http://localhost:5001/tipos-habitaciones/${encodeURIComponent(tipoHabitacion)}/dispositivos`);
                 if (response.ok) {
                     const data = await response.json();
@@ -100,19 +106,21 @@ function Habitacion() {
 
     useEffect(() => {
         socket.on('actualizar_estado', (data) => {
-            const { dispositivoId, nuevoEstado } = data;
-            setDispositivos(dispositivos.map(dispositivo => {
-                if (dispositivo.id === dispositivoId) {
-                    return { ...dispositivo, estado: nuevoEstado };
-                }
-                return dispositivo;
-            }));
+            console.log('estado actualizando')
+            setDispositivos((prevDispositivos) => 
+                prevDispositivos.map(dispositivo =>
+                    dispositivo.id === data.dispositivoId
+                        ? { ...dispositivo, estado: data.nuevoEstado }
+                        : dispositivo
+                )
+            );
+            console.log('estado:', data.nuevoEstado)
         });
-
+    
         return () => {
             socket.off('actualizar_estado');
         };
-    })
+    }, []);    
 
     const eliminarHabitacion = async () => {
         try {
@@ -162,6 +170,7 @@ function Habitacion() {
                 setNuevoDispositivo('');
                 setTipoDispositivo('');
                 setMostrarFormulario(false);
+                window.location.reload(); 
             } else {
                 console.error('Error al agregar el dispositivo');
                 setError('Error al agregar el dispositivo. Intente nuevamente más tarde.');
@@ -172,7 +181,48 @@ function Habitacion() {
         }
     };
 
-    const eliminarDispositivo = async (dispositivoId) => {
+    const handleEditarDispositivo = (id, nombre) => {
+        setEditarDispositivoId(id);
+        setNuevoNombreDispositivo(nombre);
+        setMostrarFormulario(true);
+    };
+
+    const handleCancelarEdicion = () => {
+        setEditarDispositivoId(null);
+        setNuevoNombreDispositivo('');
+    }
+
+    async function handleActualizarNombreDispositivo(dispositivoId, nuevoNombre) {
+        if (!dispositivoId || !nuevoNombre) {
+            console.error('Falta información necesaria para actualizar el nombre del dispositivo.');
+            return;
+        }
+    
+        try {
+            const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    nuevo_nombre: nuevoNombre
+                })
+            });
+    
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const errorData = await response.json();
+                console.error('Error al actualizar nombre del dispositivo:', errorData);
+            }
+        } catch (error) {
+            console.error('Error al actualizar nombre del dispositivo:', error);
+        }
+    }
+    
+
+    const handleEliminarDispositivo = async (dispositivoId) => {
         try {
             const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
                 method: 'DELETE',
@@ -192,6 +242,64 @@ function Habitacion() {
         }
     };
 
+    const handleComandos = async (dispositivoId) => {
+        try {
+            const response = await fetch(`http://localhost:5001/casa-domotica/comandos/${dispositivoId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setComandos(data);
+                setDispositivoSeleccionado(dispositivoId);
+                setMostrarFormularioComando(false);
+            } else {
+                const errorData = await response.json();
+                console.error('Error al cargar los comandos:', errorData);
+                setError('Error al cargar los comandos. Intente nuevamente más tarde.');
+            }
+        } catch (error) {
+            console.error('Error al cargar los comandos:', error);
+            setError('Error al cargar los comandos. Intente nuevamente más tarde.');
+        }
+    }
+
+    const handleCerrarComandos = async () => {
+        setComandos(null);
+        setDispositivoSeleccionado(null);
+    }
+
+    const handleAgregarComando = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(`http://localhost:5001/casa-domotica/${dispositivoSeleccionado}/comando`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ comando: nuevoComando })
+            });
+            if (response.ok) {
+                const newComando = await response.json();
+                setComandos([...comandos.comandos, newComando]);
+                setNuevoComando("");
+                setMostrarFormularioComando(false);
+                handleComandos(dispositivoSeleccionado);
+            } else {
+                const errorData = await response.json();
+                console.error('Error al agregar el comando:', errorData);
+                setError('Error al agregar el comando. Intente nuevamente más tarde.');
+            }
+        } catch (error) {
+            console.error('Error al agregar el comando:', error);
+            setError('Error al agregar el comando. Intente nuevamente más tarde.');
+        }
+    };       
+
     if (!habitacion) {
         return <p>Cargando habitación...</p>;
     }
@@ -206,10 +314,61 @@ function Habitacion() {
                 {dispositivos.length > 0 ? (
                     dispositivos.map((dispositivo) => (
                         <li key={dispositivo.id}>
-                            <span>{dispositivo.nombre}</span>
-                            <span>Tipo: {dispositivo.tipo}</span>
-                            <span>Estado: {dispositivo.estado}</span>
-                            <button className="delete2-button" onClick={() => eliminarDispositivo(dispositivo.id)}>Eliminar</button>
+                            {editarDispositivoId === dispositivo.id ? (
+                                <div className="editar-dispositivo-form">
+                                    <input
+                                        type="text"
+                                        value={nuevoNombreDispositivo}
+                                        onChange={(e) => setNuevoNombreDispositivo(e.target.value)}
+                                    />
+                                    <button onClick={() => handleActualizarNombreDispositivo(dispositivo.id, nuevoNombreDispositivo)}>Guardar</button>
+                                    <button onClick={handleCancelarEdicion} className="cancelar-button">Cancelar</button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className='info'>
+                                        <span>{dispositivo.nombre}</span>
+                                        <span>Tipo: {dispositivo.tipo}</span>
+                                        <span>Estado: {dispositivo.estado}</span>
+                                    </div>
+                                    <div className='buttons'>
+                                        <button onClick={() => handleComandos(dispositivo.id)} className='comandos-button'>Comandos</button>
+                                        <button onClick={() => handleEditarDispositivo(dispositivo.id, dispositivo.nombre)} className="editar-button">Editar</button>
+                                        <button onClick={() => handleEliminarDispositivo(dispositivo.id)} className="delete2-button">Eliminar</button>
+                                    </div>
+                                    {dispositivoSeleccionado === dispositivo.id && (
+                                        <div>
+                                            <h3>Comandos disponibles:</h3>
+                                            {comandos.comandos && comandos.comandos.length > 0 ? (
+                                                <ul>
+                                                    {comandos.comandos.map((comando, index) => (
+                                                    <li key={index}>{comando}</li>
+                                                    ))}
+                                                </ul>
+                                                ) : (
+                                                <p>No hay comandos disponibles.</p>
+                                                )}
+                                            {mostrarFormularioComando ? (
+                                                <form onSubmit={handleAgregarComando}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Nuevo Comando"
+                                                        value={nuevoComando}
+                                                        onChange={(e) => setNuevoComando(e.target.value)}
+                                                    />
+                                                    <button type="submit">Agregar</button>
+                                                    <button type="button" onClick={() => setMostrarFormularioComando(false)}>Cancelar</button>
+                                                </form>
+                                            ) : (
+                                                <div className='add-close-buttons'>
+                                                    <button className='agregar-comando-button' onClick={() => setMostrarFormularioComando(true)}>Agregar Comando</button>
+                                                    <button className='cerrar-button' onClick={() => handleCerrarComandos()}>Cerrar</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </li>
                     ))
                 ) : (

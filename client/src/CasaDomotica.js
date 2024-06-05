@@ -296,6 +296,7 @@ function CasaDomotica() {
     const handleEditarClick = (id, nombre) => {
         setEditarHabitacionId(id);
         setNuevoNombreHabitacion(nombre);
+        cargarHabitaciones();
     };
 
     const handleCancelarEdicion = () => {

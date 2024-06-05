@@ -61,21 +61,44 @@ class TextAnalyzer:
 
         dispositivo = None
         comando = None
+        estado = None
 
         for token in doc:
             token_text = unidecode(token.text.lower())
             print(f'Analizando token: {token_text}')
             if token_text in dispositivos:
                 dispositivo = token_text
-                comando = unidecode(text.lower())
+            elif comando == 'encender' and dispositivo:
+                # Si ya hay un comando 'encender' y un dispositivo, entonces el resto del texto es el estado
+                estado = text.replace('encender', '')
+                estado = estado.replace(dispositivo, '').strip()
                 break
+            elif token_text == 'encender':
+                # Si el token es 'encender', entonces hay un comando específico
+                comando = token_text
+            elif comando == 'reproducir' and dispositivo:
+                # Si ya hay un comando 'encender' y un dispositivo, entonces el resto del texto es el estado
+                estado = text.replace('reproducir', '')
+                estado = estado.replace(dispositivo, '').strip()
 
-        print(f'Dispositivo encontrado: {dispositivo}, Comando encontrado: {comando}') 
-
-        if dispositivo and comando:
+        if dispositivo:
+            if comando:
+                # Si hay un comando específico como 'encender', el estado es "encendido" si no se ha establecido otro estado
+                estado = estado or "encendido"
+            # Construir el comando a partir del texto original
+            comando = unidecode(text.lower())
+            print(f'Dispositivo encontrado: {dispositivo}, Comando encontrado: {comando}, Estado: {estado}')
+            # Obtener la acción del comando
             accion = self.command_manager.get_accion_por_comando(comando)
             print(f'Acción encontrada: {accion}')
-            self.command_manager.actualizar_estado_dispositivo(dispositivo, accion, habitacion_id)
-            return dispositivo, accion
+            # Actualizar el estado del dispositivo
+            if accion is None:
+                self.command_manager.actualizar_estado_electrodomestico_temperatura(dispositivo, estado, habitacion_id)
+                return dispositivo, estado
+            else:
+                self.command_manager.actualizar_estado_dispositivo(dispositivo, accion, habitacion_id)
+                return dispositivo, accion
 
-        return dispositivo, None
+        return dispositivo, estado or accion
+
+

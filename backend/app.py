@@ -123,16 +123,17 @@ def handle_audio(data):
         print("Transcripción emitida al cliente:", texto_sin_comas)
 
         dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_sin_comas, nombre_hab)
+        print(dispositivo, nuevo_estado)
         if dispositivo and nuevo_estado:
             if command_manager.actualizar_estado_dispositivo(dispositivo, nuevo_estado):
                 print('Estado del dispositivo actualizado:', dispositivo, nuevo_estado)
-                socketio.emit('estado_actualizado', {'dispositivo': dispositivo, 'nuevo_estado': nuevo_estado})
+                socketio.emit('actualizar_estado', {'dispositivo': dispositivo, 'nuevo_estado': nuevo_estado})
             else:
                 print('Error al actualizar el estado del dispositivo:', dispositivo)
-                socketio.emit('estado_actualizado', {'error': 'Error al actualizar el estado del dispositivo'})
+                socketio.emit('actualizar_estado', {'error': 'Error al actualizar el estado del dispositivo'})
         else:
             print('No se encontró dispositivo o comando válido en la transcripción')
-            socketio.emit('estado_actualizado', {'error': 'No se encontró dispositivo o comando válido en la transcripción'})
+            socketio.emit('actualizar_estado', {'error': 'No se encontró dispositivo o comando válido en la transcripción'})
 
     except Exception as e:
         print(f"Error processing audio: {e}")
@@ -339,27 +340,56 @@ def eliminar_dispositivo_ruta(nombre, dispositivo_id):
     room_manager.eliminar_dispositivo(dispositivo_id)
     return jsonify({'mensaje': 'Dispositivo eliminado'}), 200
 
+@app.route('/casa-domotica/<nombre_habitacion>/dispositivos/<dispositivo_id>', methods=['PUT'])
+@jwt_required()
+def actualizar_nombre_dispositivo(nombre_habitacion, dispositivo_id):
+    try:
+        usuario_id = get_jwt_identity()
+        nuevo_nombre = request.json.get('nuevo_nombre')
+        if not nuevo_nombre:
+            return jsonify({'mensaje': 'El nuevo nombre del dispositivo es necesario'}), 400
+        if room_manager.actualizar_nombre_dispositivo(usuario_id, nombre_habitacion, dispositivo_id, nuevo_nombre):
+            return jsonify({'mensaje': f'Nombre del dispositivo actualizado correctamente a {nuevo_nombre}'}), 200
+        else:
+            return jsonify({'mensaje': 'No se pudo actualizar el nombre del dispositivo. Verifique que tiene acceso al dispositivo y que el nuevo nombre no esté ya en uso.'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Ocurrió un error al actualizar el nombre del dispositivo'}), 500
+
 @app.route('/casa-domotica/<nombre>/dispositivos/estado', methods=['PUT'])
 @jwt_required()
 @cross_origin()
-def actualizar_estado():
+def actualizar_estado(nombre):
     data = request.json
-    dispositivo = data.get('dispositivo')
+    dispositivo_id = data.get('dispositivo')
     nuevo_estado = data.get('nuevo_estado')
 
-    if not dispositivo or not nuevo_estado:
+    if not dispositivo_id or not nuevo_estado:
         return jsonify({"error": "Datos incompletos"}), 400
 
-    if command_manager.actualizar_estado_dispositivo(dispositivo, nuevo_estado):
-        return jsonify({"message": "Estado actualizado correctamente"}), 200
-    else:
-        return jsonify({"error": "Error al actualizar el estado"}), 500
+    try:
+        if command_manager.actualizar_estado_dispositivo(dispositivo_id, nuevo_estado):
+            socketio.emit('actualizar_estado', {'dispositivoId': dispositivo_id, 'nuevoEstado': nuevo_estado})
+            return jsonify({"message": "Estado actualizado correctamente"}), 200
+        else:
+            return jsonify({"error": "Error al actualizar el estado"}), 500
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return jsonify({"error": "Error inesperado"}), 500
 
 # Gestión de comandos
-@app.route('/comando', methods=['POST'])
-def manejar_comando():
+@app.route('/casa-domotica/comandos/<int:dispositivo_id>', methods=['GET'])
+@jwt_required()
+def get_commandos_dispositivo(dispositivo_id):
+    comandos = command_manager.get_commands(dispositivo_id)
+    if comandos:
+        return jsonify({'comandos': [comando[0] for comando in comandos]})
+    else:
+        return jsonify({'comandos': []})
+
+@app.route('/casa-domotica/<tipo_dispositivo>/comando', methods=['POST'])
+def manejar_comando(tipo_dispositivo):
     comando = request.json.get('comando')
-    accion = command_manager.add_command(comando)
+    accion = command_manager.add_command(tipo_dispositivo, comando)
     if accion:
         return jsonify({'accion': accion})
     else:
