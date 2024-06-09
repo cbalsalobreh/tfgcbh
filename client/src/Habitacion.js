@@ -21,10 +21,6 @@ function Habitacion() {
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
     const [editarDispositivoId, setEditarDispositivoId] = useState('');
     const [nuevoNombreDispositivo, setNuevoNombreDispositivo] = useState('');
-    const [comandos, setComandos] = useState([]);
-    const [mostrarFormularioComando, setMostrarFormularioComando] = useState(false);
-    const [nuevoComando, setNuevoComando] = useState("");
-    const [dispositivoSeleccionado, setDispositivoSeleccionado] = useState(null);
 
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -242,64 +238,6 @@ function Habitacion() {
         }
     };
 
-    const handleComandos = async (dispositivoId) => {
-        try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/comandos/${dispositivoId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setComandos(data);
-                setDispositivoSeleccionado(dispositivoId);
-                setMostrarFormularioComando(false);
-            } else {
-                const errorData = await response.json();
-                console.error('Error al cargar los comandos:', errorData);
-                setError('Error al cargar los comandos. Intente nuevamente más tarde.');
-            }
-        } catch (error) {
-            console.error('Error al cargar los comandos:', error);
-            setError('Error al cargar los comandos. Intente nuevamente más tarde.');
-        }
-    }
-
-    const handleCerrarComandos = async () => {
-        setComandos(null);
-        setDispositivoSeleccionado(null);
-    }
-
-    const handleAgregarComando = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/${dispositivoSeleccionado}/comando`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ comando: nuevoComando })
-            });
-            if (response.ok) {
-                const newComando = await response.json();
-                setComandos([...comandos.comandos, newComando]);
-                setNuevoComando("");
-                setMostrarFormularioComando(false);
-                handleComandos(dispositivoSeleccionado);
-            } else {
-                const errorData = await response.json();
-                console.error('Error al agregar el comando:', errorData);
-                setError('Error al agregar el comando. Intente nuevamente más tarde.');
-            }
-        } catch (error) {
-            console.error('Error al agregar el comando:', error);
-            setError('Error al agregar el comando. Intente nuevamente más tarde.');
-        }
-    };       
-
     if (!habitacion) {
         return <p>Cargando habitación...</p>;
     }
@@ -332,41 +270,9 @@ function Habitacion() {
                                         <span>Estado: {dispositivo.estado}</span>
                                     </div>
                                     <div className='buttons'>
-                                        <button onClick={() => handleComandos(dispositivo.id)} className='comandos-button'>Comandos</button>
                                         <button onClick={() => handleEditarDispositivo(dispositivo.id, dispositivo.nombre)} className="editar-button">Editar</button>
                                         <button onClick={() => handleEliminarDispositivo(dispositivo.id)} className="delete2-button">Eliminar</button>
                                     </div>
-                                    {dispositivoSeleccionado === dispositivo.id && (
-                                        <div>
-                                            <h3>Comandos disponibles:</h3>
-                                            {comandos.comandos && comandos.comandos.length > 0 ? (
-                                                <ul>
-                                                    {comandos.comandos.map((comando, index) => (
-                                                    <li key={index}>{comando}</li>
-                                                    ))}
-                                                </ul>
-                                                ) : (
-                                                <p>No hay comandos disponibles.</p>
-                                                )}
-                                            {mostrarFormularioComando ? (
-                                                <form onSubmit={handleAgregarComando}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Nuevo Comando"
-                                                        value={nuevoComando}
-                                                        onChange={(e) => setNuevoComando(e.target.value)}
-                                                    />
-                                                    <button type="submit">Agregar</button>
-                                                    <button type="button" onClick={() => setMostrarFormularioComando(false)}>Cancelar</button>
-                                                </form>
-                                            ) : (
-                                                <div className='add-close-buttons'>
-                                                    <button className='agregar-comando-button' onClick={() => setMostrarFormularioComando(true)}>Agregar Comando</button>
-                                                    <button className='cerrar-button' onClick={() => handleCerrarComandos()}>Cerrar</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
                                 </>
                             )}
                         </li>

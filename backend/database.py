@@ -1,4 +1,6 @@
 import sqlite3
+import bcrypt # type: ignore
+from utils import obtener_participio
 
 class DatabaseManager:
     def __init__(self, db_file):
@@ -24,59 +26,34 @@ class DatabaseManager:
             if self.conn:
                 self.conn.close()
 
-
     def save_user_to_database(self, username, email, password):
+        # Genera un hash de la contraseña utilizando bcrypt
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         query = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)'
-        self.execute_query(query, (username, email, password))
+        self.execute_query(query, (username, email, hashed_password.decode('utf-8')))
 
     def check_credentials(self, username, password):
         query = "SELECT * FROM users WHERE username = ? AND password = ?"
         result = self.execute_query(query, (username, password))
         return bool(result)
 
-    def get_user_data(self, username):
-        query = "SELECT * FROM users WHERE username = ?"
-        return self.execute_query(query, (username,))
-
     def get_user_id(self, username):
         query = "SELECT id FROM users WHERE username = ?"
         result = self.execute_query(query, (username,))
         return result[0][0] if result else None
+    
+    def get_user_data(self, username):
+        query = "SELECT * FROM users WHERE username = ?"
+        return self.execute_query(query, (username,))
     
     def get_username_with_id(self, user_id):
         query = "SELECT username FROM users WHERE id = ?"
         result = self.execute_query(query, (user_id,))
         return result[0][0] if result else None
 
-
     def change_password(self, user_id, new_password):
         query = "UPDATE users SET password = ? WHERE id = ?"
         self.execute_query(query, (new_password, user_id))
-
-    def get_tipo_id(self, tipo_nombre):
-        query = "SELECT id FROM tipos_habitaciones WHERE nombre = ?"
-        result = self.execute_query(query, (tipo_nombre,))
-        return result[0][0] if result else None
-
-    def get_id_habitacion(self, habitacion):
-        query = "SELECT id FROM habitaciones WHERE nombre = ?"
-        result = self.execute_query(query, (habitacion,))
-        return result[0][0] if result else None
-
-    def add_tipo_habitacion(self, nombre):
-        query = "INSERT INTO tipos_habitaciones (nombre) VALUES (?)"
-        self.execute_query(query, (nombre,))
-        return self.execute_query("SELECT last_insert_rowid()")[0][0]
-
-    def get_tipos_habitaciones(self):
-        query = "SELECT id, nombre FROM tipos_habitaciones"
-        result = self.execute_query(query)
-        return [{'id': th[0], 'nombre': th[1]} for th in result]
-
-    def get_dispositivos_predeterminados_por_tipo(self, tipo_id):
-        query = "SELECT nombre FROM tipos_dispositivos WHERE tipo_habitacion_id = ?"
-        result = self.execute_query(query, (tipo_id,))
-        return [dispositivo[0] for dispositivo in result]
 
     def get_habitaciones_por_usuario(self, user_id):
         query = """
@@ -98,3 +75,36 @@ class DatabaseManager:
         """
         result = self.execute_query(query, (user_id,))
         return [dispositivo[0].lower() for dispositivo in result]
+    
+    def get_id_habitacion(self, habitacion):
+        query = "SELECT id FROM habitaciones WHERE nombre = ?"
+        result = self.execute_query(query, (habitacion,))
+        return result[0][0] if result else None
+    
+    def get_nombre_dispositivos_habitacion(self, hab_id):
+        query = "SELECT nombre FROM dispositivos WHERE habitacion_id = ?"
+        result = self.execute_query(query, (hab_id,))
+        return [dispositivo[0].lower() for dispositivo in result]
+
+    def get_estado_dispositivo(self, dispositivo, habitacion):
+        query = '''
+            SELECT d.estado FROM dispositivos d
+            JOIN habitaciones h ON d.habitacion_id = h.id
+            WHERE d.nombre = ? AND h.nombre = ?
+            '''
+        result = self.execute_query(query, (dispositivo, habitacion))
+        return result[0] if result else None
+
+    def get_dispositivo_id(self, dispositivo):
+        query = "SELECT id FROM dispositivos WHERE nombre = ?"
+        result = self.execute_query(query, (dispositivo,))
+        return result[0][0] if result else None
+
+    def actualizar_estado_dispositivo(self, dispositivo, accion, habitacion_id):
+        participio_accion = obtener_participio(accion)
+        query = "UPDATE dispositivos SET estado = ? WHERE nombre = ? AND habitacion_id = ?"
+        self.execute_query(query, (participio_accion, dispositivo, habitacion_id))
+
+    def actualizar_estado_electrodomestico_temperatura(self, dispositivo, estado, habitacion_id):
+        query = "UPDATE dispositivos SET estado = ? WHERE nombre = ? AND habitacion_id = ?"
+        self.execute_query(query, (estado, dispositivo, habitacion_id))

@@ -46,7 +46,7 @@ function CasaDomotica() {
                     return;
                 }
                 
-                const response = await fetch('/get_user_data', {
+                const response = await fetch(`/get_username`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -261,14 +261,8 @@ function CasaDomotica() {
 
     const handleTipoChange = (e) => {
         const value = e.target.value;
-        if (value === 'Otro') {
-            setEsTipoPersonalizado(true);
-            setTipoHabitacion('');
-        } else {
-            setEsTipoPersonalizado(false);
-            setTipoHabitacion(value);
-        }
-    };
+        setTipoHabitacion(value);
+    }
 
     const handleLogout = async () => {
         try {
@@ -352,7 +346,6 @@ function CasaDomotica() {
                             {tiposHabitaciones.map((tipo) => (
                                 <option key={tipo.id} value={tipo.nombre}>{tipo.nombre}</option>
                             ))}
-                            <option value="Otro">Otro</option>
                         </select>
                     )}
                     {esTipoPersonalizado && (

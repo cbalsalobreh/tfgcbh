@@ -22,3 +22,10 @@ def get_base_verb(text):
             verb_lemma = token.lemma_
             break
     return verb_lemma
+
+def obtener_participio(verbo):
+    if verbo.endswith("ar") or verbo.endswith("a"):
+        return verbo[:-2] + "ado"
+    elif verbo.endswith("er") or verbo.endswith("e") or verbo.endswith("ir"):
+        return verbo[:-2] + "ido"
+    return verbo

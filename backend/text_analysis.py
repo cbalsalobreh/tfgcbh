@@ -1,5 +1,3 @@
-from rooms import RoomManager
-from comands import CommandManager
 from database import DatabaseManager
 import spacy # type: ignore
 from unidecode import unidecode # type: ignore
@@ -7,8 +5,6 @@ from unidecode import unidecode # type: ignore
 class TextAnalyzer:
     def __init__(self, db_path):
         self.db_path = db_path
-        self.room_manager = RoomManager(db_path)
-        self.command_manager = CommandManager(db_path)
         self.database_manager = DatabaseManager(db_path)
         self.nlp = spacy.load('es_core_news_sm')
 
@@ -54,51 +50,38 @@ class TextAnalyzer:
     def analyze_device(self, text, nombre_hab):
         doc = self.nlp(text)
         habitacion_id = self.database_manager.get_id_habitacion(nombre_hab)
-        dispositivos = self.room_manager.get_nombre_dispositivos_habitacion(habitacion_id)
+        dispositivos = self.database_manager.get_nombre_dispositivos_habitacion(habitacion_id)
 
         dispositivos = [unidecode(dispositivo.lower()) for dispositivo in dispositivos]
         print(f'Habitación ID: {habitacion_id}, Dispositivos: {dispositivos}')
 
         dispositivo = None
-        comando = None
-        estado = None
+        accion = None
 
-        for token in doc:
-            token_text = unidecode(token.text.lower())
-            print(f'Analizando token: {token_text}')
-            if token_text in dispositivos:
-                dispositivo = token_text
-            elif comando == 'encender' and dispositivo:
-                # Si ya hay un comando 'encender' y un dispositivo, entonces el resto del texto es el estado
-                estado = text.replace('encender', '')
-                estado = estado.replace(dispositivo, '').strip()
+        # Generar n-gramas desde la transcripción por palabras
+        words = [token.text.lower() for token in doc if not token.is_punct and not token.is_space]
+        ngrams = [unidecode(' '.join(words[i:i+n])) for n in range(1, len(words)+1) for i in range(len(words)-n+1)]
+
+        print(f'N-gramas generados: {ngrams}')
+
+        # Buscar dispositivos en los n-gramas
+        for ngram in ngrams:
+            if ngram in dispositivos:
+                dispositivo = ngram
+                print(f'Dispositivo encontrado: {dispositivo}')
                 break
-            elif token_text == 'encender':
-                # Si el token es 'encender', entonces hay un comando específico
-                comando = token_text
-            elif comando == 'reproducir' and dispositivo:
-                # Si ya hay un comando 'encender' y un dispositivo, entonces el resto del texto es el estado
-                estado = text.replace('reproducir', '')
-                estado = estado.replace(dispositivo, '').strip()
 
+        # Buscar comandos asociados al dispositivo
         if dispositivo:
-            if comando:
-                # Si hay un comando específico como 'encender', el estado es "encendido" si no se ha establecido otro estado
-                estado = estado or "encendido"
-            # Construir el comando a partir del texto original
-            comando = unidecode(text.lower())
-            print(f'Dispositivo encontrado: {dispositivo}, Comando encontrado: {comando}, Estado: {estado}')
-            # Obtener la acción del comando
-            accion = self.command_manager.get_accion_por_comando(comando)
-            print(f'Acción encontrada: {accion}')
-            # Actualizar el estado del dispositivo
-            if accion is None:
-                self.command_manager.actualizar_estado_electrodomestico_temperatura(dispositivo, estado, habitacion_id)
-                return dispositivo, estado
-            else:
-                self.command_manager.actualizar_estado_dispositivo(dispositivo, accion, habitacion_id)
-                return dispositivo, accion
+            for token in doc:
+                token_text = unidecode(token.text.lower())
+                print(f'Analizando token: {token_text}')
 
-        return dispositivo, estado or accion
+        if dispositivo and accion:
+            print(f'Dispositivo: {dispositivo}, Acción: {accion}')
+            # Actualizar el estado del dispositivo en la base de datos
+            self.database_manager.actualizar_estado_dispositivo(dispositivo, accion, habitacion_id)
+            return dispositivo, accion
 
-
+        print('No se encontró dispositivo o comando válido en la transcripción')
+        return None, None

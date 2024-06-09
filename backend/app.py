@@ -10,7 +10,7 @@ import tempfile
 from unidecode import unidecode # type: ignore
 from flask_wtf.csrf import generate_csrf
 from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
-from comands import CommandManager
+from devices import DeviceManager
 from text_analysis import TextAnalyzer
 from database import DatabaseManager
 from rooms import RoomManager
@@ -30,7 +30,7 @@ print("Cargado whisper")
 db_path = 'db/database.db'
 db_manager = DatabaseManager(db_path)
 room_manager = RoomManager(db_path)
-command_manager = CommandManager('db/database.db')
+device_manager = DeviceManager('db/database.db')
 text_analyzer = TextAnalyzer('db/database.db')
 
 # Servidor WebSockets
@@ -125,7 +125,7 @@ def handle_audio(data):
         dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_sin_comas, nombre_hab)
         print(dispositivo, nuevo_estado)
         if dispositivo and nuevo_estado:
-            if command_manager.actualizar_estado_dispositivo(dispositivo, nuevo_estado):
+            if device_manager.actualizar_estado_dispositivo(dispositivo, nuevo_estado):
                 print('Estado del dispositivo actualizado:', dispositivo, nuevo_estado)
                 socketio.emit('actualizar_estado', {'dispositivo': dispositivo, 'nuevo_estado': nuevo_estado})
             else:
@@ -156,7 +156,7 @@ def login():
 
     if db_manager.check_credentials(login_username, login_password):
         usuario_id = db_manager.get_user_id(login_username)
-        expires = timedelta(days=30) if remember_me else timedelta(minutes=15)
+        expires = timedelta(days=30) if remember_me else timedelta(minutes=60)
         access_token = create_access_token(identity=usuario_id, expires_delta=expires)
         return jsonify(token=access_token, user_id=usuario_id, redirect='/casa-domotica'), 200
     else:
@@ -176,6 +176,28 @@ def logout():
     session.clear()
     return jsonify({'message': 'Logout exitoso'})
 
+
+# Gestión de usuario
+@app.route('/get_username', methods=['GET'])
+@jwt_required()
+def get_username():
+    user_id = get_jwt_identity()
+    username = db_manager.get_username_with_id(user_id)
+    if username:
+        return jsonify({'username': username})
+    else:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
+@app.route('/usuario/<username>', methods=['GET'])
+@jwt_required()
+@cross_origin()
+def get_user_data(username):
+    user_data = db_manager.get_user_data(username)
+    if user_data:
+        return jsonify(user_data)
+    else:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
 @app.route('/change_password', methods=['POST'])
 @jwt_required()
 def change_password_route():
@@ -186,9 +208,10 @@ def change_password_route():
         db_manager.change_password(user_id, new_password)
         return jsonify({'message': 'Contraseña cambiada exitosamente'})
     else:
-        return jsonify({'message': 'Usuario no autenticado'}), 401
+        return jsonify({'message': 'Usuario no autenticado'}), 401    
 
-# Gestión de usuario
+
+# Gestión de habitaciones
 @app.route('/casa-domotica', methods=['GET', 'POST'])
 @jwt_required()
 @cross_origin()
@@ -226,7 +249,6 @@ def manejar_habitacion(nombre):
         else:
             return jsonify({'mensaje': 'Habitación no encontrada'}), 404
 
-
 @app.route('/<id_habitacion>', methods=['DELETE'])
 def borrar_habitacion(id_habitacion):
     try:
@@ -256,67 +278,27 @@ def cambiar_nombre_habitacion(nombre):
 @app.route('/tipos-habitaciones', methods=['GET'])
 def obtener_tipos_habitaciones():
     try:
-        tipos_habitaciones = db_manager.get_tipos_habitaciones()
+        tipos_habitaciones = room_manager.get_tipos_habitaciones()
         if tipos_habitaciones is not None:
             return jsonify({'tipos_habitaciones': tipos_habitaciones}), 200
         else:
             return jsonify({'error': 'No se pudieron obtener los tipos de habitaciones'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/tipos-habitaciones', methods=['POST'])
-def agregar_tipo_habitacion():
-    data = request.json
-    nombre = data.get('nombre')
-    try:
-        nuevo_tipo_id = db_manager.add_tipo_habitacion(nombre)
-        return jsonify({'id': nuevo_tipo_id, 'nombre': nombre}), 201
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/tipos-habitaciones/<tipo_nombre>')
-def obtener_tipo_habitacion(tipo_nombre):
-    try:
-        tipo_id = db_manager.get_tipo_id(tipo_nombre)
-        if tipo_id:
-            return jsonify({'tipo_id': tipo_id, 'tipo_nombre': tipo_nombre})
-        else:
-            return jsonify({'mensaje': 'Tipo de habitación no encontrado'}), 404
-    except Exception as e:
-        return jsonify({'error': 'Ocurrió un error al obtener el tipo de habitación'}), 500
     
 @app.route('/tipos-habitaciones/<nombre>/dispositivos', methods=['GET'])
 def obtener_dispositivos_predeterminados(nombre):
     try:
-        tipo_id = db_manager.get_tipo_id(nombre)
+        tipo_id = room_manager.get_tipo_id(nombre)
         if tipo_id is None:
             return jsonify({'error': 'Tipo de habitación no encontrado'}), 404
         
-        dispositivos = db_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
+        dispositivos = room_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
         return jsonify({'dispositivos': dispositivos}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/get_user_data', methods=['GET'])
-@jwt_required()
-def get_username():
-    user_id = get_jwt_identity()
-    username = db_manager.get_username_with_id(user_id)
-    if username:
-        return jsonify({'username': username})
-    else:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
 
-@app.route('/usuario/<username>', methods=['GET'])
-@jwt_required()
-@cross_origin()
-def get_user_data(username):
-    user_data = db_manager.get_user_data(username)
-    if user_data:
-        return jsonify(user_data)
-    else:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
-    
+
 # Gestión de dispositivos
 @app.route('/casa-domotica/<nombre>/dispositivos', methods=['POST'])
 @jwt_required()
@@ -330,14 +312,14 @@ def manejar_dispositivos(nombre):
     tipo_dispositivo = request.json.get('tipo')
     if not nombre_dispositivo or not tipo_dispositivo:
         return jsonify({'mensaje': 'Nombre y tipo del dispositivo son necesarios'}), 400
-    room_manager.add_dispositivo(nombre_dispositivo, tipo_dispositivo, habitacion['id'])
+    device_manager.add_dispositivo(nombre_dispositivo, tipo_dispositivo, habitacion['id'])
     return jsonify({'mensaje': 'Dispositivo añadido'}), 201
 
 @app.route('/casa-domotica/<nombre>/dispositivos/<dispositivo_id>', methods=['DELETE'])
 @jwt_required()
 @cross_origin()
-def eliminar_dispositivo_ruta(nombre, dispositivo_id):
-    room_manager.eliminar_dispositivo(dispositivo_id)
+def eliminar_dispositivo(dispositivo_id):
+    device_manager.eliminar_dispositivo(dispositivo_id)
     return jsonify({'mensaje': 'Dispositivo eliminado'}), 200
 
 @app.route('/casa-domotica/<nombre_habitacion>/dispositivos/<dispositivo_id>', methods=['PUT'])
@@ -348,13 +330,15 @@ def actualizar_nombre_dispositivo(nombre_habitacion, dispositivo_id):
         nuevo_nombre = request.json.get('nuevo_nombre')
         if not nuevo_nombre:
             return jsonify({'mensaje': 'El nuevo nombre del dispositivo es necesario'}), 400
-        if room_manager.actualizar_nombre_dispositivo(usuario_id, nombre_habitacion, dispositivo_id, nuevo_nombre):
+        if device_manager.actualizar_nombre_dispositivo(usuario_id, nombre_habitacion, dispositivo_id, nuevo_nombre):
             return jsonify({'mensaje': f'Nombre del dispositivo actualizado correctamente a {nuevo_nombre}'}), 200
         else:
             return jsonify({'mensaje': 'No se pudo actualizar el nombre del dispositivo. Verifique que tiene acceso al dispositivo y que el nuevo nombre no esté ya en uso.'}), 400
     except Exception as e:
         return jsonify({'error': 'Ocurrió un error al actualizar el nombre del dispositivo'}), 500
 
+
+#INTENTAR CON SOCKET
 @app.route('/casa-domotica/<nombre>/dispositivos/estado', methods=['PUT'])
 @jwt_required()
 @cross_origin()
@@ -362,12 +346,10 @@ def actualizar_estado(nombre):
     data = request.json
     dispositivo_id = data.get('dispositivo')
     nuevo_estado = data.get('nuevo_estado')
-
     if not dispositivo_id or not nuevo_estado:
         return jsonify({"error": "Datos incompletos"}), 400
-
     try:
-        if command_manager.actualizar_estado_dispositivo(dispositivo_id, nuevo_estado):
+        if device_manager.actualizar_estado_dispositivo(dispositivo_id, nuevo_estado):
             socketio.emit('actualizar_estado', {'dispositivoId': dispositivo_id, 'nuevoEstado': nuevo_estado})
             return jsonify({"message": "Estado actualizado correctamente"}), 200
         else:
@@ -375,25 +357,6 @@ def actualizar_estado(nombre):
     except Exception as e:
         print(f"Error inesperado: {e}")
         return jsonify({"error": "Error inesperado"}), 500
-
-# Gestión de comandos
-@app.route('/casa-domotica/comandos/<int:dispositivo_id>', methods=['GET'])
-@jwt_required()
-def get_commandos_dispositivo(dispositivo_id):
-    comandos = command_manager.get_commands(dispositivo_id)
-    if comandos:
-        return jsonify({'comandos': [comando[0] for comando in comandos]})
-    else:
-        return jsonify({'comandos': []})
-
-@app.route('/casa-domotica/<tipo_dispositivo>/comando', methods=['POST'])
-def manejar_comando(tipo_dispositivo):
-    comando = request.json.get('comando')
-    accion = command_manager.add_command(tipo_dispositivo, comando)
-    if accion:
-        return jsonify({'accion': accion})
-    else:
-        return jsonify({'error': 'Comando no encontrado'}), 404
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5001)
