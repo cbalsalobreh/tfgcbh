@@ -1,5 +1,5 @@
 import sqlite3
-import bcrypt # type: ignore
+import bcrypt
 from utils import obtener_participio
 
 class DatabaseManager:
@@ -33,9 +33,13 @@ class DatabaseManager:
         self.execute_query(query, (username, email, hashed_password.decode('utf-8')))
 
     def check_credentials(self, username, password):
-        query = "SELECT * FROM users WHERE username = ? AND password = ?"
-        result = self.execute_query(query, (username, password))
-        return bool(result)
+        query = "SELECT password FROM users WHERE username = ?"
+        result = self.execute_query(query, (username,))
+        if result:
+            stored_password = result[0][0]  # Obtener el hash almacenado
+            # Comparar la contraseña proporcionada con el hash almacenado
+            return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
+        return False
 
     def get_user_id(self, username):
         query = "SELECT id FROM users WHERE username = ?"
@@ -59,8 +63,7 @@ class DatabaseManager:
         query = """
             SELECT h.nombre 
             FROM habitaciones h
-            JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
-            WHERE uh.id_usuario = ?
+            WHERE h.usuario_id = ?
         """
         result = self.execute_query(query, (user_id,))
         return [habitacion[0].lower() for habitacion in result]
@@ -70,8 +73,7 @@ class DatabaseManager:
             SELECT d.nombre 
             FROM dispositivos d
             JOIN habitaciones h ON d.habitacion_id = h.id
-            JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
-            WHERE uh.id_usuario = ?
+            WHERE h.usuario_id = ?
         """
         result = self.execute_query(query, (user_id,))
         return [dispositivo[0].lower() for dispositivo in result]
@@ -101,10 +103,5 @@ class DatabaseManager:
         return result[0][0] if result else None
 
     def actualizar_estado_dispositivo(self, dispositivo, accion, habitacion_id):
-        participio_accion = obtener_participio(accion)
         query = "UPDATE dispositivos SET estado = ? WHERE nombre = ? AND habitacion_id = ?"
-        self.execute_query(query, (participio_accion, dispositivo, habitacion_id))
-
-    def actualizar_estado_electrodomestico_temperatura(self, dispositivo, estado, habitacion_id):
-        query = "UPDATE dispositivos SET estado = ? WHERE nombre = ? AND habitacion_id = ?"
-        self.execute_query(query, (estado, dispositivo, habitacion_id))
+        self.execute_query(query, (accion, dispositivo, habitacion_id))

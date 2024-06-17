@@ -31,13 +31,14 @@ function Habitacion() {
                 const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
+                    },
+                    mode: 'cors'
                 });
                 if (response.ok) {
                     const data = await response.json();
                     setHabitacion(data.habitacion);
                     setDispositivos(data.dispositivos || []);
-                    cargarDispositivosPredeterminados(data.habitacion.tipo);
+                    cargarDispositivosPredeterminados(data.habitacion[2]);
                 } else {
                     const errorData = await response.json();
                     console.error('Error al cargar la habitación:', errorData);
@@ -87,7 +88,7 @@ function Habitacion() {
             reader.readAsDataURL(recordingBlob);
             reader.onloadend = () => {
                 const base64Data = reader.result.split(',')[1];
-                socket.emit('audio_room', { audioData: base64Data, nombreHab: habitacion.nombre });
+                socket.emit('audio_room', { audioData: base64Data, nombreHab: habitacion[1] });
                 
                 const newAudioUrl = URL.createObjectURL(recordingBlob);
                 setAudioUrl((prevAudioUrl) => {
@@ -102,15 +103,15 @@ function Habitacion() {
 
     useEffect(() => {
         socket.on('actualizar_estado', (data) => {
-            console.log('estado actualizando')
+            console.log(data)
             setDispositivos((prevDispositivos) => 
                 prevDispositivos.map(dispositivo =>
-                    dispositivo.id === data.dispositivoId
-                        ? { ...dispositivo, estado: data.nuevoEstado }
+                    dispositivo.nombre === data.dispositivo
+                        ? { ...dispositivo, estado: data.nuevo_estado }
                         : dispositivo
                 )
             );
-            console.log('estado:', data.nuevoEstado)
+            console.log('estado:', data.nuevo_estado)
         });
     
         return () => {
@@ -166,7 +167,7 @@ function Habitacion() {
                 setNuevoDispositivo('');
                 setTipoDispositivo('');
                 setMostrarFormulario(false);
-                window.location.reload(); 
+                window.location.reload();
             } else {
                 console.error('Error al agregar el dispositivo');
                 setError('Error al agregar el dispositivo. Intente nuevamente más tarde.');
@@ -220,7 +221,7 @@ function Habitacion() {
 
     const handleEliminarDispositivo = async (dispositivoId) => {
         try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
+            const response = await fetch(`http://localhost:5001/dispositivo/${dispositivoId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -245,7 +246,7 @@ function Habitacion() {
     return (
         <div className="habitacion-container">
             {error && <p className="error-message">{error}</p>}
-            <h2>Dispositivos de {habitacion.nombre}</h2>
+            <h2>Dispositivos de {habitacion[1]}</h2>
             <button onClick={volver} className="back-button">Volver</button>
             <button onClick={eliminarHabitacion} className="delete-button">Eliminar Habitación</button>
             <ul>

@@ -28,9 +28,8 @@ class RoomManager:
         query = """
             SELECT h.id, h.nombre, th.nombre AS tipo
             FROM habitaciones h
-            JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
             JOIN tipos_habitaciones th ON h.tipo_id = th.id
-            WHERE uh.id_usuario = ?
+            WHERE h.usuario_id = ?
         """
         return self.execute_query(query, (usuario_id,))
 
@@ -43,18 +42,13 @@ class RoomManager:
         if not tipo_id:
             print(f"No se encontró el ID para el tipo de habitación '{tipo_nombre}'")
             return
-        query_insert_habitacion = "INSERT INTO habitaciones (nombre, tipo_id) VALUES (?, ?)"
-        query_insert_usuario_habitacion = "INSERT INTO usuarios_habitaciones (id_usuario, id_habitacion) VALUES (?, ?)"
-        self.execute_query(query_insert_habitacion, (nombre, tipo_id))
-        habitacion_id = self.conn.lastrowid
-        self.execute_query(query_insert_usuario_habitacion, (usuario_id, habitacion_id))
+        query_insert_habitacion = "INSERT INTO habitaciones (nombre, tipo_id, usuario_id) VALUES (?, ?, ?)"
+        self.execute_query(query_insert_habitacion, (nombre, tipo_id[0][0], usuario_id))
 
     def delete_habitacion_id(self, id):
         query_dispositivos = "DELETE FROM dispositivos WHERE habitacion_id = ?"
-        query_usuarios_habitaciones = "DELETE FROM usuarios_habitaciones WHERE id_habitacion = ?"
         query_habitaciones = "DELETE FROM habitaciones WHERE id = ?"
         self.execute_query(query_dispositivos, (id,))
-        self.execute_query(query_usuarios_habitaciones, (id,))
         self.execute_query(query_habitaciones, (id,))
 
     def delete_habitacion(self, nombre):
@@ -71,8 +65,7 @@ class RoomManager:
         query_select = """
             SELECT h.id 
             FROM habitaciones h
-            JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
-            WHERE h.nombre = ? AND uh.id_usuario = ?
+            WHERE h.nombre = ? AND h.usuario_id = ?
         """
         query_update = "UPDATE habitaciones SET nombre = ? WHERE id = ?"
         habitacion_id = self.execute_query(query_select, (nombre_actual, usuario_id))

@@ -29,12 +29,8 @@ class DeviceManager:
         return sqlite3.connect(self.db_file)
     
     def add_dispositivo(self, nombre, tipo, habitacion_id):
-        query_select = "SELECT id FROM habitaciones WHERE id = ?"
         query_insert = "INSERT INTO dispositivos (nombre, tipo, habitacion_id) VALUES (?, ?, ?)"
         try:
-            self.execute_query(query_select, (habitacion_id,))
-            if self.conn.fetchone() is None:
-                raise ValueError("Habitación no encontrada")
             self.execute_query(query_insert, (nombre, tipo, habitacion_id))
         except Exception as e:
             print("Error adding device:", e)
@@ -47,13 +43,11 @@ class DeviceManager:
             SELECT d.id
             FROM dispositivos d
             JOIN habitaciones h ON d.habitacion_id = h.id
-            JOIN usuarios_habitaciones uh ON h.id = uh.id_habitacion
-            WHERE d.id = ? AND h.nombre = ? AND uh.id_usuario = ?
+            WHERE d.id = ? AND h.nombre = ? AND h.usuario_id = ?
         """
         query_update = "UPDATE dispositivos SET nombre = ? WHERE id = ?"
         try:
-            self.execute_query(query_select, (dispositivo_id, nombre_habitacion, usuario_id))
-            dispositivo_existente = self.conn.fetchone()
+            dispositivo_existente = self.execute_query(query_select, (dispositivo_id, nombre_habitacion, usuario_id))
             if dispositivo_existente:
                 self.execute_query(query_update, (nuevo_nombre, dispositivo_id))
                 return True

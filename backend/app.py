@@ -1,3 +1,4 @@
+
 from datetime import timedelta
 import re
 from flask import Flask, jsonify, request, session
@@ -9,7 +10,7 @@ import base64
 import tempfile
 from unidecode import unidecode # type: ignore
 from flask_wtf.csrf import generate_csrf
-from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request # type: ignore
 from devices import DeviceManager
 from text_analysis import TextAnalyzer
 from database import DatabaseManager
@@ -91,7 +92,7 @@ def handle_audio(audio_data):
         habitacion, dispositivo = text_analyzer.analyze_text(texto_sin_comas, usuario_id)
         print('Texto analizado:', dispositivo, habitacion)
         if dispositivo and habitacion:
-            estado = room_manager.get_estado_dispositivo(dispositivo, habitacion)
+            estado = db_manager.get_estado_dispositivo(dispositivo, habitacion)
             if estado:
                 socketio.emit('estado_dispositivo', {'dispositivo': dispositivo, 'estado': estado, 'habitacion': habitacion})
             else:
@@ -125,12 +126,8 @@ def handle_audio(data):
         dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_sin_comas, nombre_hab)
         print(dispositivo, nuevo_estado)
         if dispositivo and nuevo_estado:
-            if device_manager.actualizar_estado_dispositivo(dispositivo, nuevo_estado):
                 print('Estado del dispositivo actualizado:', dispositivo, nuevo_estado)
                 socketio.emit('actualizar_estado', {'dispositivo': dispositivo, 'nuevo_estado': nuevo_estado})
-            else:
-                print('Error al actualizar el estado del dispositivo:', dispositivo)
-                socketio.emit('actualizar_estado', {'error': 'Error al actualizar el estado del dispositivo'})
         else:
             print('No se encontró dispositivo o comando válido en la transcripción')
             socketio.emit('actualizar_estado', {'error': 'No se encontró dispositivo o comando válido en la transcripción'})
@@ -242,9 +239,9 @@ def manejar_habitacion(nombre):
         return jsonify({'mensaje': 'Habitación eliminada'})
     else:
         habitaciones = room_manager.get_habitaciones(usuario_id)
-        habitacion = next((h for h in habitaciones if h['nombre'] == nombre), None)
+        habitacion = next((h for h in habitaciones if h[1] == nombre), None)
         if habitacion:
-            dispositivos = room_manager.get_dispositivos_por_habitacion(habitacion['id'])
+            dispositivos = room_manager.get_dispositivos_por_habitacion(habitacion[0])
             return jsonify({'habitacion': habitacion, 'dispositivos': dispositivos})
         else:
             return jsonify({'mensaje': 'Habitación no encontrada'}), 404
@@ -292,8 +289,7 @@ def obtener_dispositivos_predeterminados(nombre):
         tipo_id = room_manager.get_tipo_id(nombre)
         if tipo_id is None:
             return jsonify({'error': 'Tipo de habitación no encontrado'}), 404
-        
-        dispositivos = room_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
+        dispositivos = room_manager.get_dispositivos_predeterminados_por_tipo(tipo_id[0][0])
         return jsonify({'dispositivos': dispositivos}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -305,17 +301,17 @@ def obtener_dispositivos_predeterminados(nombre):
 @cross_origin()
 def manejar_dispositivos(nombre):
     usuario_id = get_jwt_identity()
-    habitacion = next((h for h in room_manager.get_habitaciones(usuario_id) if h['nombre'] == nombre), None)
+    habitacion = next((h for h in room_manager.get_habitaciones(usuario_id) if h[1] == nombre), None)
     if not habitacion:
         return jsonify({'mensaje': 'Habitación no encontrada'}), 404
     nombre_dispositivo = request.json.get('nombre')
     tipo_dispositivo = request.json.get('tipo')
     if not nombre_dispositivo or not tipo_dispositivo:
         return jsonify({'mensaje': 'Nombre y tipo del dispositivo son necesarios'}), 400
-    device_manager.add_dispositivo(nombre_dispositivo, tipo_dispositivo, habitacion['id'])
+    device_manager.add_dispositivo(nombre_dispositivo, tipo_dispositivo, habitacion[0])
     return jsonify({'mensaje': 'Dispositivo añadido'}), 201
 
-@app.route('/casa-domotica/<nombre>/dispositivos/<dispositivo_id>', methods=['DELETE'])
+@app.route('/dispositivo/<dispositivo_id>', methods=['DELETE'])
 @jwt_required()
 @cross_origin()
 def eliminar_dispositivo(dispositivo_id):

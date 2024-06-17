@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CasaDomotica.css';
@@ -107,23 +108,23 @@ function CasaDomotica() {
 
     const cargarHabitaciones = async () => {
         try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            throw new Error('Token de autenticación no encontrado');
-          }
-          const response = await fetch('/casa-domotica', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
-          }
-          const data = await response.json();
-          setHabitaciones(data);
-        } catch (error) {
-          console.error('Error al cargar habitaciones:', error);
-        }
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Token de autenticación no encontrado');
+            }
+            const response = await fetch('/casa-domotica', {
+                headers: {
+                'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            const data = await response.json();
+            setHabitaciones(data);
+            } catch (error) {
+            console.error('Error al cargar habitaciones:', error);
+            }
     };
 
     const cargarTiposHabitaciones = async () => {
@@ -195,8 +196,9 @@ function CasaDomotica() {
     };    
 
     async function handleActualizarHabitacion() {
-        const nombreActual = habitaciones.find(hab => hab.id === editarHabitacionId)?.nombre;
+        const nombreActual = habitaciones.find(hab => hab[0] === editarHabitacionId)?.[1];
         const nuevoNombre = nuevoNombreHabitacion;
+        console.log(nombreActual, nuevoNombre);
     
         if (!nombreActual || !nuevoNombre) {
             console.error('Nombre actual o nuevo nombre no están disponibles.');
@@ -307,8 +309,8 @@ function CasaDomotica() {
             <ul className="habitaciones-list">
                 {habitaciones.length > 0 ? (
                     habitaciones.map((habitacion) => (
-                        <li key={habitacion.id} className="habitacion-item">
-                            {editarHabitacionId === habitacion.id ? (
+                        <li key={habitacion[0]} className="habitacion-item">
+                            {editarHabitacionId === habitacion[0] ? (
                                 <div className="editar-habitacion-form">
                                     <input
                                         type="text"
@@ -320,9 +322,9 @@ function CasaDomotica() {
                                 </div>
                             ) : (
                                 <>
-                                    <button onClick={() => handleHabitacionClick(habitacion.nombre)}>{habitacion.nombre}</button>
-                                    <button onClick={() => handleEditarClick(habitacion.id, habitacion.nombre)} className="editar-button">Editar</button>
-                                    <button onClick={() => handleEliminarHabitacion(habitacion.id)} className="delete-button">Eliminar</button>
+                                    <button onClick={() => handleHabitacionClick(habitacion[1])}>{habitacion[1]}</button>
+                                    <button onClick={() => handleEditarClick(habitacion[0], habitacion[1])} className="editar-button">Editar</button>
+                                    <button onClick={() => handleEliminarHabitacion(habitacion[0])} className="delete-button">Eliminar</button>
                                 </>
                             )}
                         </li>

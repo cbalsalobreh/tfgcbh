@@ -1,5 +1,6 @@
 from database import DatabaseManager
 import spacy # type: ignore
+from utils import obtener_participio
 from unidecode import unidecode # type: ignore
 
 class TextAnalyzer:
@@ -48,6 +49,8 @@ class TextAnalyzer:
         return habitacion, dispositivo
 
     def analyze_device(self, text, nombre_hab):
+        acciones_comunes = ["encender", "apagar", "subir", "bajar", "echar", "recoger", "sacar", "reproducir", "poner"]
+        
         doc = self.nlp(text)
         habitacion_id = self.database_manager.get_id_habitacion(nombre_hab)
         dispositivos = self.database_manager.get_nombre_dispositivos_habitacion(habitacion_id)
@@ -57,31 +60,48 @@ class TextAnalyzer:
 
         dispositivo = None
         accion = None
+        estado = None
 
-        # Generar n-gramas desde la transcripción por palabras
-        words = [token.text.lower() for token in doc if not token.is_punct and not token.is_space]
-        ngrams = [unidecode(' '.join(words[i:i+n])) for n in range(1, len(words)+1) for i in range(len(words)-n+1)]
+        tokens = [unidecode(token.text.lower()) for token in doc]
 
-        print(f'N-gramas generados: {ngrams}')
-
-        # Buscar dispositivos en los n-gramas
-        for ngram in ngrams:
-            if ngram in dispositivos:
-                dispositivo = ngram
-                print(f'Dispositivo encontrado: {dispositivo}')
+        for i in range(len(tokens)):
+            for j in range(i + 1, len(tokens) + 1):
+                possible_device = ' '.join(tokens[i:j])
+                if possible_device in dispositivos:
+                    dispositivo = possible_device
+                    break
+            if dispositivo:
                 break
-
-        # Buscar comandos asociados al dispositivo
+        
         if dispositivo:
-            for token in doc:
-                token_text = unidecode(token.text.lower())
-                print(f'Analizando token: {token_text}')
+            for token in tokens:
+                if token in acciones_comunes:
+                    accion = token
+                    break
 
         if dispositivo and accion:
-            print(f'Dispositivo: {dispositivo}, Acción: {accion}')
-            # Actualizar el estado del dispositivo en la base de datos
-            self.database_manager.actualizar_estado_dispositivo(dispositivo, accion, habitacion_id)
-            return dispositivo, accion
+            accion_start_index = text.lower().find(accion)
+            dispositivo_start_index = text.lower().find(dispositivo)
+            print(f'acción empieza en: {accion_start_index}, dispositivo empieza en: {dispositivo_start_index}')
+            if dispositivo_start_index != -1 and accion_start_index != -1:
+                if dispositivo_start_index > accion_start_index:
+                    estado = text[dispositivo_start_index + len(dispositivo):].strip()
+                else:
+                    estado = text[accion_start_index + len(accion):].strip()
 
-        print('No se encontró dispositivo o comando válido en la transcripción')
+            print(f'Dispositivo encontrado: {dispositivo}, Estado: {estado}, Acción: {accion}')
+            if not estado:
+                accion_participio = obtener_participio(accion)
+                self.database_manager.actualizar_estado_dispositivo(dispositivo, accion_participio, habitacion_id)
+            else:
+                self.database_manager.actualizar_estado_dispositivo(dispositivo, estado, habitacion_id)
+            
+            return dispositivo, estado or accion_participio
+
+        print(f'Dispositivo o acción no encontrado. Dispositivo: {dispositivo}, Acción: {accion}')
         return None, None
+
+
+
+
+
