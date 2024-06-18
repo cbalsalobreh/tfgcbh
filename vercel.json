@@ -1,32 +1,18 @@
 {
     "version": 2,
     "builds": [
-    {
-        "src": "package.json",
-        "use": "@vercel/node"
-    },
-    {
-        "src": "app.py",
-        "use": "@vercel/python"
-    }
+        { "src": "package.json", "use": "@vercel/node" },
+        { "src": "app.py", "use": "@vercel/python" }
     ],
     "routes": [
-    {
-        "src": "/(.*)",
-        "dest": "client/public/index.html"
-    },
-    {
-        "src": "/(.*)",
-        "dest": "app.py"
-    }
+        { "src": "/(.*)", "dest": "app.py" },
+        { "src": "/(.*)", "dest": "client/public/index.html" }
     ],
     "functions": {
         "install": {
-        "includeFiles": {
-            "files": ["requirements.txt"],
-            "dest": "./"
-        },
-        "runtime": "@vercel/python"
+        "runtime": "@vercel/python",
+        "includeFiles": "requirements.txt"
         }
     }
 }
+
