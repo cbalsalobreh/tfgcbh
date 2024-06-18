@@ -1,6 +1,5 @@
 import sqlite3
 import bcrypt
-from utils import obtener_participio
 
 class DatabaseManager:
     def __init__(self, db_file):

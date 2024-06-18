@@ -1,5 +1,4 @@
 import spacy # type: ignore
-from unidecode import unidecode # type: ignore
 
 def get_base_verb(text):
     # Lista de verbos irregulares y sus formas base

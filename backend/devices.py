@@ -1,5 +1,4 @@
 import sqlite3
-from utils import obtener_participio
 
 class DeviceManager:
     def __init__(self, db_file):

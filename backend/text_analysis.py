@@ -1,6 +1,6 @@
-from database import DatabaseManager
+from backend.database import DatabaseManager
 import spacy # type: ignore
-from utils import obtener_participio
+from backend.utils import obtener_participio
 from unidecode import unidecode # type: ignore
 
 class TextAnalyzer:
