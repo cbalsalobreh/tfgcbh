@@ -13,17 +13,6 @@
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
 .App-link {
   color: #61dafb;
 }
@@ -34,5 +23,31 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  position: relative; /* Agrega posición relativa para manejar la imagen */
+}
+
+/* Estilo para la imagen de cabecera */
+.App-header img {
+  height: auto; /* Ajusta la altura automáticamente */
+  max-width: 100%; /* La imagen se ajusta al ancho máximo del contenedor */
+}
+
+/* Media query para ajustar la imagen en pantallas pequeñas */
+@media (max-width: 768px) {
+  .App-header img {
+    height: auto;
+    max-width: 80%; /* Reducir el ancho máximo para pantallas pequeñas */
   }
 }

@@ -74,3 +74,19 @@ body {
     font-weight: bold;
     color: red;
 }
+
+
+
+/* Media queries */
+@media (max-width: 600px) {
+    .login-container,
+    .register-container {
+        width: 90%;
+        padding: 10px;
+    }
+
+    .login-form-container,
+    .register-form-container {
+        padding: 20px;
+    }
+}

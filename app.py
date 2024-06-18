@@ -1,9 +1,9 @@
 
 from datetime import timedelta
 import re
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
-from flask_socketio import SocketIO, emit, disconnect
+from flask_socketio import SocketIO, disconnect
 import whisper
 from flask_cors import CORS, cross_origin
 import base64
@@ -11,12 +11,12 @@ import tempfile
 from unidecode import unidecode # type: ignore
 from flask_wtf.csrf import generate_csrf
 from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request # type: ignore
-from devices import DeviceManager
-from text_analysis import TextAnalyzer
-from database import DatabaseManager
-from rooms import RoomManager
+from backend.devices import DeviceManager
+from backend.text_analysis import TextAnalyzer
+from backend.database import DatabaseManager
+from backend.rooms import RoomManager
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='client/build')
 app.config['SECRET_KEY'] = 'secret!'  
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' 
@@ -137,6 +137,10 @@ def handle_audio(data):
 
 
 # REST API Endpoints
+@app.route("/", defaults={'path':''})
+def serve(path):
+    return send_from_directory(app.static_folder,'index.html')
+
 @app.route('/')
 def index():
     csrf_token = generate_csrf()
@@ -332,27 +336,6 @@ def actualizar_nombre_dispositivo(nombre_habitacion, dispositivo_id):
             return jsonify({'mensaje': 'No se pudo actualizar el nombre del dispositivo. Verifique que tiene acceso al dispositivo y que el nuevo nombre no esté ya en uso.'}), 400
     except Exception as e:
         return jsonify({'error': 'Ocurrió un error al actualizar el nombre del dispositivo'}), 500
-
-
-#INTENTAR CON SOCKET
-@app.route('/casa-domotica/<nombre>/dispositivos/estado', methods=['PUT'])
-@jwt_required()
-@cross_origin()
-def actualizar_estado(nombre):
-    data = request.json
-    dispositivo_id = data.get('dispositivo')
-    nuevo_estado = data.get('nuevo_estado')
-    if not dispositivo_id or not nuevo_estado:
-        return jsonify({"error": "Datos incompletos"}), 400
-    try:
-        if device_manager.actualizar_estado_dispositivo(dispositivo_id, nuevo_estado):
-            socketio.emit('actualizar_estado', {'dispositivoId': dispositivo_id, 'nuevoEstado': nuevo_estado})
-            return jsonify({"message": "Estado actualizado correctamente"}), 200
-        else:
-            return jsonify({"error": "Error al actualizar el estado"}), 500
-    except Exception as e:
-        print(f"Error inesperado: {e}")
-        return jsonify({"error": "Error inesperado"}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5001)
