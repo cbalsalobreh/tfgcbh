@@ -10,7 +10,7 @@
     ],
     "functions": {
         "install": {
-        "runtime": "@vercel/python",
+        "runtime": "runtime.txt",
         "includeFiles": "requirements.txt"
         }
     }
