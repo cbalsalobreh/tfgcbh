@@ -137,9 +137,13 @@ def handle_audio(data):
 
 
 # REST API Endpoints
-@app.route("/", defaults={'path':''})
-def serve(path):
-    return send_from_directory(app.static_folder,'index.html')
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route("/<path:path>", defaults={'path':''})
+def static_proxy(path):
+    return send_from_directory(app.static_folder, path)
 
 @app.route('/')
 def index():
