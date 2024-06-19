@@ -28,7 +28,7 @@ function Habitacion() {
     useEffect(() => {
         const cargarHabitacion = async () => {
             try {
-                const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}`, {
+                const response = await fetch(`/casa-domotica/${nombre}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     },
@@ -52,7 +52,7 @@ function Habitacion() {
 
         const cargarDispositivosPredeterminados = async (tipoHabitacion) => {
             try {
-                const response = await fetch(`http://localhost:5001/tipos-habitaciones/${encodeURIComponent(tipoHabitacion)}/dispositivos`);
+                const response = await fetch(`/tipos-habitaciones/${encodeURIComponent(tipoHabitacion)}/dispositivos`);
                 if (response.ok) {
                     const data = await response.json();
                     setDispositivosPredeterminados(data.dispositivos);
@@ -121,7 +121,7 @@ function Habitacion() {
 
     const eliminarHabitacion = async () => {
         try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}`, {
+            const response = await fetch(`/casa-domotica/${nombre}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -152,7 +152,7 @@ function Habitacion() {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}/dispositivos`, {
+            const response = await fetch(`/casa-domotica/${nombre}/dispositivos`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ function Habitacion() {
         }
     
         try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
+            const response = await fetch(`/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ function Habitacion() {
 
     const handleEliminarDispositivo = async (dispositivoId) => {
         try {
-            const response = await fetch(`http://localhost:5001/dispositivo/${dispositivoId}`, {
+            const response = await fetch(`/dispositivo/${dispositivoId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

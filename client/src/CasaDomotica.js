@@ -129,7 +129,7 @@ function CasaDomotica() {
 
     const cargarTiposHabitaciones = async () => {
         try {
-            const response = await fetch('http://localhost:5001/tipos-habitaciones');
+            const response = await fetch('/tipos-habitaciones');
             if (response.ok) {
                 const data = await response.json();
                 setTiposHabitaciones(data.tipos_habitaciones);
@@ -150,7 +150,7 @@ function CasaDomotica() {
                 if (tipoExistente) {
                     tipoHabitacionId = tipoExistente.id;
                 } else {
-                    const response = await fetch('http://localhost:5001/tipos-habitaciones', {
+                    const response = await fetch('/tipos-habitaciones', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ function CasaDomotica() {
         }
     
         try {
-            const response = await fetch('http://localhost:5001/casa-domotica', {
+            const response = await fetch('/casa-domotica', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ function CasaDomotica() {
         }
     
         try {
-            const response = await fetch(`http://localhost:5001/casa-domotica/${nombreActual}`, {
+            const response = await fetch(`/casa-domotica/${nombreActual}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ function CasaDomotica() {
     
     const handleEliminarHabitacion = async (id) => {
         try {
-            const response = await fetch(`http://localhost:5001/${id}`, {
+            const response = await fetch(`/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

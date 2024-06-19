@@ -18,7 +18,12 @@ function LoginForm() {
 
     const fetchCsrfToken = async () => {
         try {
-            const response = await fetch('http://localhost:5001/');
+            const response = await fetch('/get_csfr', {
+                credentials: 'include', // Incluye las cookies en la solicitud
+            });
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
             const data = await response.json();
             setCsrfToken(data.csrf_token);
         } catch (error) {
@@ -31,7 +36,7 @@ function LoginForm() {
         event.preventDefault();
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:5001/login', {
+            const response = await fetch('/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

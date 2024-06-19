@@ -10,7 +10,7 @@ import base64
 import tempfile
 from unidecode import unidecode # type: ignore
 from flask_wtf.csrf import generate_csrf
-from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request # type: ignore
+from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 from backend.devices import DeviceManager
 from backend.text_analysis import TextAnalyzer
 from backend.database import DatabaseManager
@@ -23,16 +23,17 @@ app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
 Session(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 CORS(app, resources={r"/*": {"origins": "*"}})
+socketio.init_app(app, cors_allowed_origins="*")
 jwt = JWTManager(app)
 
 audio_model = whisper.load_model("small")
 print("Cargado whisper")
 
-db_path = 'db/database.db'
+db_path = 'backend/db/database.db'
 db_manager = DatabaseManager(db_path)
 room_manager = RoomManager(db_path)
-device_manager = DeviceManager('db/database.db')
-text_analyzer = TextAnalyzer('db/database.db')
+device_manager = DeviceManager(db_path)
+text_analyzer = TextAnalyzer(db_path)
 
 # Servidor WebSockets
 @socketio.on('connect')
@@ -145,7 +146,7 @@ def serve():
 def static_proxy(path):
     return send_from_directory(app.static_folder, path)
 
-@app.route('/')
+@app.route('/get_csfr')
 def index():
     csrf_token = generate_csrf()
     session['csrf_token'] = csrf_token
