@@ -1,3 +1,4 @@
+import re
 from backend.database import DatabaseManager
 import spacy # type: ignore
 from backend.utils import obtener_participio
@@ -48,21 +49,19 @@ class TextAnalyzer:
 
         return habitacion, dispositivo
 
-    def analyze_device(self, text, nombre_hab):
-        acciones_comunes = ["encender", "apagar", "subir", "bajar", "echar", "recoger", "sacar", "reproducir", "poner"]
-        
+    def analyze_device(self, text, nombre_hab):        
         doc = self.nlp(text)
         habitacion_id = self.database_manager.get_id_habitacion(nombre_hab)
         dispositivos = self.database_manager.get_nombre_dispositivos_habitacion(habitacion_id)
 
-        dispositivos = [unidecode(dispositivo.lower()) for dispositivo in dispositivos]
+        dispositivos = [dispositivo.lower() for dispositivo in dispositivos]
         print(f'Habitación ID: {habitacion_id}, Dispositivos: {dispositivos}')
 
         dispositivo = None
         accion = None
         estado = None
 
-        tokens = [unidecode(token.text.lower()) for token in doc]
+        tokens = [token.text.lower() for token in doc]
 
         for i in range(len(tokens)):
             for j in range(i + 1, len(tokens) + 1):
@@ -74,34 +73,51 @@ class TextAnalyzer:
                 break
         
         if dispositivo:
-            for token in tokens:
-                if token in acciones_comunes:
-                    accion = token
+            dispositivo_id = self.database_manager.get_tipo_dispositivo_id(dispositivo)
+            dispositivo_id_int = dispositivo_id[0]
+            acciones_por_dispositivo = self.database_manager.get_acciones_permitidas(dispositivo_id_int)
+
+            for i in range(len(tokens)):
+                for j in range(i + 1, len(tokens) + 1):
+                    accion_posible = ' '.join(tokens[i:j])
+                    if accion_posible in acciones_por_dispositivo:
+                        accion = accion_posible
+                        break
+                if accion:
                     break
 
         if dispositivo and accion:
-            accion_start_index = text.lower().find(accion)
-            dispositivo_start_index = text.lower().find(dispositivo)
-            print(f'acción empieza en: {accion_start_index}, dispositivo empieza en: {dispositivo_start_index}')
-            if dispositivo_start_index != -1 and accion_start_index != -1:
-                if dispositivo_start_index > accion_start_index:
-                    estado = text[dispositivo_start_index + len(dispositivo):].strip()
+            # Detección de números en el texto usando spaCy
+            numeros_detectados = [token.text for token in doc if token.pos_ == 'NUM']
+            # Para subir y bajar persiana o sacar toldo
+            if "subir" in accion and "persiana" in dispositivo or "bajar" in accion and "persiana" in dispositivo or "sacar" in accion:
+                if "mitad" in text:
+                    estado = "abierto a la mitad"
+                elif numeros_detectados:
+                    estado = f"abierto al {numeros_detectados[0]}%"
+                elif "subir" in accion and "persiana" in dispositivo:
+                    estado = "abierta"
+                elif "bajar" in accion and "persiana" in dispositivo:
+                    estado = "cerrada"
+                elif "sacar" in accion:
+                    estado = "abierto"
                 else:
-                    estado = text[accion_start_index + len(accion):].strip()
-
-            print(f'Dispositivo encontrado: {dispositivo}, Estado: {estado}, Acción: {accion}')
-            if not estado:
-                accion_participio = obtener_participio(accion)
-                self.database_manager.actualizar_estado_dispositivo(dispositivo, accion_participio, habitacion_id)
+                    estado = None
+            # Para controles de temperatura, nevera y congelador
+            elif "regular" in accion or "establecer" in accion or "ajustar" in accion:
+                if "grados" in text:
+                    estado = re.search(r'\d+ grados', text).group()
+                elif numeros_detectados:
+                    estado = f"{numeros_detectados[0]}"
+                else:
+                    estado = None
+            # Para lo demás
             else:
-                self.database_manager.actualizar_estado_dispositivo(dispositivo, estado, habitacion_id)
+                estado = self.database_manager.get_estado_por_accion(accion)[0]
             
-            return dispositivo, estado or accion_participio
+            print(f'Dispositivo encontrado: {dispositivo}, Estado: {estado}, Acción: {accion}')
+            self.database_manager.actualizar_estado_dispositivo(dispositivo, estado, habitacion_id)            
+            return dispositivo, estado
 
         print(f'Dispositivo o acción no encontrado. Dispositivo: {dispositivo}, Acción: {accion}')
         return None, None
-
-
-
-
-

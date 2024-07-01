@@ -12,6 +12,7 @@ function Habitacion() {
     const [transcription, setTranscription] = useState('');
     const [audioUrl, setAudioUrl] = useState('');
 
+    const { username } = useParams();
     const { nombre } = useParams();
     const [habitacion, setHabitacion] = useState(null);
     const [dispositivos, setDispositivos] = useState([]);
@@ -24,15 +25,19 @@ function Habitacion() {
 
     const [error, setError] = useState('');
     const navigate = useNavigate();
-
+    
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/');  // Redirige a la página de inicio de sesión si no hay token
+            return;
+        }
         const cargarHabitacion = async () => {
             try {
-                const response = await fetch(`/casa-domotica/${nombre}`, {
+                const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}/dispositivos`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    mode: 'cors'
+                    }
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -50,9 +55,9 @@ function Habitacion() {
             }
         };
 
-        const cargarDispositivosPredeterminados = async (tipoHabitacion) => {
+        const cargarDispositivosPredeterminados = async (nombreHabitacion) => {
             try {
-                const response = await fetch(`/tipos-habitaciones/${encodeURIComponent(tipoHabitacion)}/dispositivos`);
+                const response = await fetch(`/tipos-habitaciones/${encodeURIComponent(nombreHabitacion)}/dispositivos`);
                 if (response.ok) {
                     const data = await response.json();
                     setDispositivosPredeterminados(data.dispositivos);
@@ -66,9 +71,8 @@ function Habitacion() {
                 setError('Error al cargar los dispositivos predeterminados. Intente nuevamente más tarde.');
             }
         };
-
         cargarHabitacion();
-    }, [nombre]);
+    }, [username, nombre, navigate]);
 
     useEffect(() => {
         const handleTranscription = (data) => {
@@ -121,14 +125,14 @@ function Habitacion() {
 
     const eliminarHabitacion = async () => {
         try {
-            const response = await fetch(`/casa-domotica/${nombre}`, {
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
             if (response.ok) {
-                navigate('/casa-domotica');
+                navigate(`/usuarios/${username}/habitaciones/`);
             } else {
                 console.error('Error al eliminar la habitación');
                 setError('Error al eliminar la habitación. Intente nuevamente más tarde.');
@@ -140,7 +144,7 @@ function Habitacion() {
     };
 
     const volver = () => {
-        navigate('/casa-domotica');
+        navigate(`/usuarios/${username}/habitaciones/`);
     };
 
     const agregarDispositivo = async (e) => {
@@ -152,7 +156,7 @@ function Habitacion() {
                 return;
             }
 
-            const response = await fetch(`/casa-domotica/${nombre}/dispositivos`, {
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}/dispositivos`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -163,11 +167,10 @@ function Habitacion() {
 
             if (response.ok) {
                 const nuevoDispositivoData = await response.json();
-                setDispositivos([...dispositivos, nuevoDispositivoData]);
+                setDispositivos(prevDispositivos => [...prevDispositivos, nuevoDispositivoData]);
+                setMostrarFormulario(false);
                 setNuevoDispositivo('');
                 setTipoDispositivo('');
-                setMostrarFormulario(false);
-                window.location.reload();
             } else {
                 console.error('Error al agregar el dispositivo');
                 setError('Error al agregar el dispositivo. Intente nuevamente más tarde.');
@@ -196,8 +199,8 @@ function Habitacion() {
         }
     
         try {
-            const response = await fetch(`/casa-domotica/${nombre}/dispositivos/${dispositivoId}`, {
-                method: 'PUT',
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}/dispositivos/${dispositivoId}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -208,7 +211,15 @@ function Habitacion() {
             });
     
             if (response.ok) {
-                window.location.reload();
+                const nuevosDispositivos = dispositivos.map(disp => {
+                    if (disp.id === dispositivoId) {
+                        return {...dispositivos, nombre: nuevoNombre, tipo: tipoDispositivo};
+                    }
+                    return disp;
+                });
+                setDispositivos(nuevosDispositivos);
+                setEditarDispositivoId(null);
+                setNuevoNombreDispositivo('');
             } else {
                 const errorData = await response.json();
                 console.error('Error al actualizar nombre del dispositivo:', errorData);
@@ -221,7 +232,7 @@ function Habitacion() {
 
     const handleEliminarDispositivo = async (dispositivoId) => {
         try {
-            const response = await fetch(`/dispositivo/${dispositivoId}`, {
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}/dispositivos/${dispositivoId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

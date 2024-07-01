@@ -12,12 +12,6 @@ def init_db():
                         email TEXT NOT NULL UNIQUE,
                         password TEXT NOT NULL)''')
 
-    # Comandos table
-    cursor.execute('''CREATE TABLE IF NOT EXISTS comandos (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        comando TEXT NOT NULL,
-                        accion TEXT NOT NULL)''')
-
     # Habitaciones table
     cursor.execute('''CREATE TABLE IF NOT EXISTS habitaciones (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,25 +27,6 @@ def init_db():
                         habitacion_id INTEGER,
                         estado TEXT,
                         FOREIGN KEY (habitacion_id) REFERENCES habitaciones(id))''')
-
-    # Relationship between users and habitaciones (many-to-many)
-    cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios_habitaciones (
-                        id_usuario INTEGER,
-                        id_habitacion INTEGER,
-                        PRIMARY KEY (id_usuario, id_habitacion),
-                        FOREIGN KEY (id_usuario) REFERENCES users(id),
-                        FOREIGN KEY (id_habitacion) REFERENCES habitaciones(id))''')
-
-    # Relationship between habitaciones and dispositivos (one-to-many)
-    # Already captured in dispositivos table with habitacion_id as foreign key
-
-    # Relationship between dispositivos and comandos (many-to-many)
-    cursor.execute('''CREATE TABLE IF NOT EXISTS dispositivos_comandos (
-                        id_dispositivo INTEGER,
-                        id_comando INTEGER,
-                        PRIMARY KEY (id_dispositivo, id_comando),
-                        FOREIGN KEY (id_dispositivo) REFERENCES dispositivos(id),
-                        FOREIGN KEY (id_comando) REFERENCES comandos(id))''')
     
     cursor.execute('''CREATE TABLE tipos_habitaciones (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,

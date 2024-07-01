@@ -5,9 +5,13 @@ class RoomManager:
         self.db_file = db_file
         self.conn = None
 
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
+
     def execute_query(self, query, parameters=[]):
         try:
-            self.conn = sqlite3.connect(self.db_file)
+            self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
             cursor = self.conn.cursor()
             if parameters:
                 cursor.execute(query, parameters)
@@ -20,9 +24,6 @@ class RoomManager:
         except sqlite3.Error as e:
             print("Error executing query:", e, "Query:", query, "Parameters:", parameters)
             return None
-        finally:
-            if self.conn:
-                self.conn.close()
 
     def get_habitaciones(self, usuario_id):
         query = """
@@ -35,7 +36,10 @@ class RoomManager:
 
     def get_tipo_id(self, tipo_nombre):
         query = "SELECT id FROM tipos_habitaciones WHERE nombre = ?"
-        return self.execute_query(query, (tipo_nombre,))
+        result = self.execute_query(query, (tipo_nombre,))
+        if result:
+            return result[0][0]
+        return None
 
     def add_habitacion(self, nombre, tipo_nombre, usuario_id):
         tipo_id = self.get_tipo_id(tipo_nombre)
@@ -43,7 +47,7 @@ class RoomManager:
             print(f"No se encontró el ID para el tipo de habitación '{tipo_nombre}'")
             return
         query_insert_habitacion = "INSERT INTO habitaciones (nombre, tipo_id, usuario_id) VALUES (?, ?, ?)"
-        self.execute_query(query_insert_habitacion, (nombre, tipo_id[0][0], usuario_id))
+        self.execute_query(query_insert_habitacion, (nombre, tipo_id, usuario_id))
 
     def delete_habitacion_id(self, id):
         query_dispositivos = "DELETE FROM dispositivos WHERE habitacion_id = ?"

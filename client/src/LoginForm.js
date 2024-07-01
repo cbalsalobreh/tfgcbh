@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './LoginForm.css';
 
 function LoginForm() {
-    const [loginUsername, setLoginUsername] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [csrfToken, setCsrfToken] = useState('');
     const [message, setMessage] = useState('');
@@ -18,7 +18,7 @@ function LoginForm() {
 
     const fetchCsrfToken = async () => {
         try {
-            const response = await fetch('/get_csfr', {
+            const response = await fetch('/csrf-token', {
                 credentials: 'include', // Incluye las cookies en la solicitud
             });
             if (!response.ok) {
@@ -42,7 +42,7 @@ function LoginForm() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ loginUsername, loginPassword, rememberMe })
+                body: JSON.stringify({ username, password, rememberMe })
             });
             const data = await response.json();
             if (response.ok) {
@@ -73,8 +73,8 @@ function LoginForm() {
                         <input 
                             type='text' 
                             id='loginUsername' 
-                            value={loginUsername} 
-                            onChange={(e) => setLoginUsername(e.target.value)} 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
                             required 
                         />
                     </div>
@@ -83,8 +83,8 @@ function LoginForm() {
                         <input 
                             type='password' 
                             id='loginPassword' 
-                            value={loginPassword} 
-                            onChange={(e) => setLoginPassword(e.target.value)} 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
                             required 
                         />
                     </div>

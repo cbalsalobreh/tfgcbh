@@ -1,6 +1,7 @@
 
 from datetime import timedelta
 import re
+import ssl
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
 from flask_socketio import SocketIO, disconnect
@@ -19,12 +20,21 @@ from backend.rooms import RoomManager
 app = Flask(__name__, static_url_path='', static_folder='client/build')
 app.config['SECRET_KEY'] = 'secret!'  
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' 
-Session(app)
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
+
+# Configuración de CORS para toda la aplicación
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+# Configuración de Flask-SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
-CORS(app, resources={r"/*": {"origins": "*"}})
-socketio.init_app(app, cors_allowed_origins="*")
+
+# Configuración de JWT
 jwt = JWTManager(app)
+
+# Configuración de Flask-Session
+Session(app)
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 audio_model = whisper.load_model("small")
 print("Cargado whisper")
@@ -71,17 +81,13 @@ def obtener_token_de_la_solicitud():
 @socketio.on('audio')
 @jwt_required()
 def handle_audio(audio_data):
-    print("Audio recibido")
     try:
-        token = obtener_token_de_la_solicitud()  
+        token = obtener_token_de_la_solicitud()
         usuario_id = get_user_id_from_token(token)
-        print("USER ID:", usuario_id)
         audio_bytes = base64.b64decode(audio_data)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
             temp_audio_file.write(audio_bytes)
             temp_audio_file_path = temp_audio_file.name
-        print("Audio guardado en archivo temporal:", temp_audio_file_path)
-
         audio = whisper.load_audio(temp_audio_file_path)
         print("Cargado audio en whisper")
         transcript = audio_model.transcribe(audio, language='es')
@@ -108,23 +114,20 @@ def handle_audio(audio_data):
 def handle_audio(data):
     audio_data = data.get('audioData')
     nombre_hab = data.get('nombreHab')
-    print("Audio recibido")
     try:
         audio_bytes = base64.b64decode(audio_data)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
             temp_audio_file.write(audio_bytes)
             temp_audio_file_path = temp_audio_file.name
-        print("Audio guardado en archivo temporal:", temp_audio_file_path)
-
         audio = whisper.load_audio(temp_audio_file_path)
         print("Cargado audio en whisper")
         transcript = audio_model.transcribe(audio, language='es')
         text_transcription = transcript['text']
-        texto_sin_comas = unidecode(re.sub(r'[^\w\s]', '', text_transcription))
-        socketio.emit('transcription', texto_sin_comas)
-        print("Transcripción emitida al cliente:", texto_sin_comas)
+        texto_limpio = re.sub(r'[^\w\sñÑ]', '', text_transcription)
+        socketio.emit('transcription', texto_limpio)
+        print("Transcripción emitida al cliente:", texto_limpio)
 
-        dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_sin_comas, nombre_hab)
+        dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_limpio, nombre_hab)
         print(dispositivo, nuevo_estado)
         if dispositivo and nuevo_estado:
                 print('Estado del dispositivo actualizado:', dispositivo, nuevo_estado)
@@ -132,7 +135,7 @@ def handle_audio(data):
         else:
             print('No se encontró dispositivo o comando válido en la transcripción')
             socketio.emit('actualizar_estado', {'error': 'No se encontró dispositivo o comando válido en la transcripción'})
-
+    
     except Exception as e:
         print(f"Error processing audio: {e}")
 
@@ -146,141 +149,15 @@ def serve():
 def static_proxy(path):
     return send_from_directory(app.static_folder, path)
 
-@app.route('/get_csfr')
+@app.route('/csrf-token', methods=['GET'])
 def index():
-    csrf_token = generate_csrf()
-    session['csrf_token'] = csrf_token
-    return jsonify({'csrf_token': csrf_token})
-
-# Gestión de Autentificación
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.json
-    login_username = data.get('loginUsername')
-    login_password = data.get('loginPassword')
-    remember_me = data.get('rememberMe')
-
-    if db_manager.check_credentials(login_username, login_password):
-        usuario_id = db_manager.get_user_id(login_username)
-        expires = timedelta(days=30) if remember_me else timedelta(minutes=60)
-        access_token = create_access_token(identity=usuario_id, expires_delta=expires)
-        return jsonify(token=access_token, user_id=usuario_id, redirect='/casa-domotica'), 200
-    else:
-        return jsonify({'message': 'Credenciales incorrectas'}), 401
-
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.json
-    username = data.get('registerUsername')
-    email = data.get('registerEmail')
-    password = data.get('registerPassword')
-    db_manager.save_user_to_database(username, email, password)
-    return jsonify({'message': 'Registro exitoso'}) 
-
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.clear()
-    return jsonify({'message': 'Logout exitoso'})
-
-
-# Gestión de usuario
-@app.route('/get_username', methods=['GET'])
-@jwt_required()
-def get_username():
-    user_id = get_jwt_identity()
-    username = db_manager.get_username_with_id(user_id)
-    if username:
-        return jsonify({'username': username})
-    else:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
-
-@app.route('/usuario/<username>', methods=['GET'])
-@jwt_required()
-@cross_origin()
-def get_user_data(username):
-    user_data = db_manager.get_user_data(username)
-    if user_data:
-        return jsonify(user_data)
-    else:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
-
-@app.route('/change_password', methods=['POST'])
-@jwt_required()
-def change_password_route():
-    data = request.json
-    new_password = data.get('newPassword')
-    user_id = get_jwt_identity()
-    if user_id:
-        db_manager.change_password(user_id, new_password)
-        return jsonify({'message': 'Contraseña cambiada exitosamente'})
-    else:
-        return jsonify({'message': 'Usuario no autenticado'}), 401    
-
-
-# Gestión de habitaciones
-@app.route('/casa-domotica', methods=['GET', 'POST'])
-@jwt_required()
-@cross_origin()
-def manejar_habitaciones():
     try:
-        usuario_id = get_jwt_identity()
-        if request.method == 'POST':
-            nombre = request.json.get('nombre')
-            tipo = request.json.get('tipo')
-            if not nombre or not tipo:
-                return jsonify({'mensaje': 'Nombre y tipo de habitación son necesarios'}), 400
-            room_manager.add_habitacion(nombre, tipo, usuario_id)
-            return jsonify({'mensaje': 'Habitación añadida'})
-        else:
-            habitaciones = room_manager.get_habitaciones(usuario_id)
-            return jsonify(habitaciones)
+        csrf_token = generate_csrf()
+        session['csrf_token'] = csrf_token
+        return jsonify({'csrf_token': csrf_token}), 200
     except Exception as e:
-        print(f"Error en /casa-domotica: {e}")
-        return jsonify({'error': 'Ocurrió un error en el servidor.'}), 500
-
-@app.route('/casa-domotica/<nombre>', methods=['GET', 'DELETE'])
-@jwt_required()
-@cross_origin()
-def manejar_habitacion(nombre):
-    usuario_id = get_jwt_identity()
-    if request.method == 'DELETE':
-        room_manager.delete_habitacion(nombre)
-        return jsonify({'mensaje': 'Habitación eliminada'})
-    else:
-        habitaciones = room_manager.get_habitaciones(usuario_id)
-        habitacion = next((h for h in habitaciones if h[1] == nombre), None)
-        if habitacion:
-            dispositivos = room_manager.get_dispositivos_por_habitacion(habitacion[0])
-            return jsonify({'habitacion': habitacion, 'dispositivos': dispositivos})
-        else:
-            return jsonify({'mensaje': 'Habitación no encontrada'}), 404
-
-@app.route('/<id_habitacion>', methods=['DELETE'])
-def borrar_habitacion(id_habitacion):
-    try:
-        room_manager.delete_habitacion_id(id_habitacion)
-        return jsonify({'mensaje': 'Habitación eliminada'}), 200
-    except Exception as e:
-        print("Error inesperado:", e)
-        return jsonify({'error': 'Error inesperado'}), 500
-
-        
-@app.route('/casa-domotica/<nombre>', methods=['PUT'])
-@jwt_required()
-@cross_origin()
-def cambiar_nombre_habitacion(nombre):
-    try:
-        usuario_id = get_jwt_identity()
-        nuevo_nombre = request.json.get('nuevo_nombre')
-        if not nuevo_nombre:
-            return jsonify({'mensaje': 'El nuevo nombre de la habitación es necesario'}), 400
-        if room_manager.update_habitacion(usuario_id, nombre, nuevo_nombre):
-            return jsonify({'mensaje': f'Nombre de la habitación {nombre} cambiado a {nuevo_nombre}'}), 200
-        else:
-            return jsonify({'mensaje': 'No se pudo cambiar el nombre de la habitación. Verifique que tiene acceso a la habitación y que el nuevo nombre no esté ya en uso.'}), 400
-    except Exception as e:
-        return jsonify({'error': 'Ocurrió un error al cambiar el nombre de la habitación'}), 500
-        
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/tipos-habitaciones', methods=['GET'])
 def obtener_tipos_habitaciones():
     try:
@@ -288,7 +165,7 @@ def obtener_tipos_habitaciones():
         if tipos_habitaciones is not None:
             return jsonify({'tipos_habitaciones': tipos_habitaciones}), 200
         else:
-            return jsonify({'error': 'No se pudieron obtener los tipos de habitaciones'}), 500
+            return jsonify({'error': 'No se pudieron obtener los tipos de habitaciones'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
@@ -298,49 +175,205 @@ def obtener_dispositivos_predeterminados(nombre):
         tipo_id = room_manager.get_tipo_id(nombre)
         if tipo_id is None:
             return jsonify({'error': 'Tipo de habitación no encontrado'}), 404
-        dispositivos = room_manager.get_dispositivos_predeterminados_por_tipo(tipo_id[0][0])
+        dispositivos = room_manager.get_dispositivos_predeterminados_por_tipo(tipo_id)
         return jsonify({'dispositivos': dispositivos}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Gestión de Autentificación
+@app.route('/login', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def login():
+    try:
+        if request.method == 'POST':
+            data = request.json
+            username = data.get('username')
+            password = data.get('password')
+            remember_me = data.get('rememberMe')
+            redirect_url = f'/usuarios/{username}/habitaciones'
+            if db_manager.check_credentials(username, password):
+                usuario_id = db_manager.get_user_id(username)
+                expires = timedelta(days=30) if remember_me else timedelta(minutes=60)
+                access_token = create_access_token(identity=usuario_id, expires_delta=expires)
+                return jsonify(token=access_token, user_id=usuario_id, redirect=redirect_url), 200
+            else:
+                return jsonify({'error': 'Credenciales incorrectas'}), 401
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/register', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def register():
+    try:
+        if request.method == 'POST':
+            data = request.json
+            username = data.get('registerUsername')
+            email = data.get('registerEmail')
+            password = data.get('registerPassword')
+            db_manager.save_user_to_database(username, email, password)
+            return jsonify({'mensaje': 'Registro exitoso'}), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/logout', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def logout():
+    try:
+        if request.method == 'DELETE':
+            session.clear()
+            return jsonify({'mensaje': 'Logout exitoso'}), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Gestión de usuario
+
+@app.route('/usuarios/<username>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@jwt_required()
+@cross_origin()
+def get_user_data(username):
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+        if request.method == 'GET':
+            if not username:
+                return jsonify({'error': 'Usuarrio no encontrado'}), 404
+            user_data = db_manager.get_user_data(username)
+            if user_data:
+                return jsonify(user_data), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/usuario/<username>/password', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@jwt_required()
+def change_password_route():
+    try:
+        if request.method == 'PATCH':
+            data = request.json
+            new_password = data.get('newPassword')
+            usuario_id = get_jwt_identity()
+            if not usuario_id:
+                return jsonify({'error': 'Usuario no encontrado'}), 401
+            if usuario_id:
+                db_manager.change_password(usuario_id, new_password)
+                return jsonify({'mensaje': 'Contraseña cambiada exitosamente'}), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Gestión de habitaciones
+@app.route('/usuarios/<username>/habitaciones', methods=['GET', 'POST', 'DELETE', 'PUT', 'PATCH'])
+@jwt_required()
+@cross_origin()
+def manejar_habitaciones(username):
+    try:
+        usuario_id = get_jwt_identity()
+        if not username or not usuario_id:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+        if request.method == 'GET':
+            habitaciones = room_manager.get_habitaciones(usuario_id)
+            return jsonify({'habitaciones': habitaciones}), 200
+        if request.method == 'POST':
+            nombre = request.json.get('nombre')
+            tipo = request.json.get('tipo')
+            if not nombre or not tipo:
+                return jsonify({'error': 'Nombre y tipo de habitación son necesarios'}), 400
+            room_manager.add_habitacion(nombre, tipo, usuario_id)
+            return jsonify({'mensaje': 'Habitación añadida'}, nombre, tipo), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
+    except Exception as e:
+        return jsonify({'error': 'Ocurrió un error {e} en el servidor.'}), 500
+
+@app.route('/usuarios/<username>/habitaciones/<nombre>', methods=['GET', 'POST', 'DELETE', 'PUT', 'PATCH'])
+@jwt_required()
+@cross_origin()
+def manejar_habitacion(username, nombre):
+    try:
+        usuario_id = get_jwt_identity()
+        if not usuario_id or not username:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+        if request.method == 'PATCH':
+            nuevo_nombre = request.json.get('nuevo_nombre')
+            if not nuevo_nombre:
+                return jsonify({'error': 'El nuevo nombre de la habitación es necesario'}), 400
+            if room_manager.update_habitacion(usuario_id, nombre, nuevo_nombre):
+                return jsonify({'mensaje': f'Nombre de la habitación {nombre} cambiado a {nuevo_nombre}'}), 201
+            else:
+                return jsonify({'error': 'No se pudo cambiar el nombre de la habitación.'}), 401
+        if request.method == 'DELETE':
+            room_manager.delete_habitacion(nombre)
+            return jsonify({'mensaje': 'Habitación eliminada'}), 200
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 # Gestión de dispositivos
-@app.route('/casa-domotica/<nombre>/dispositivos', methods=['POST'])
+@app.route('/usuarios/<username>/habitaciones/<nombre>/dispositivos', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 @jwt_required()
 @cross_origin()
-def manejar_dispositivos(nombre):
-    usuario_id = get_jwt_identity()
-    habitacion = next((h for h in room_manager.get_habitaciones(usuario_id) if h[1] == nombre), None)
-    if not habitacion:
-        return jsonify({'mensaje': 'Habitación no encontrada'}), 404
-    nombre_dispositivo = request.json.get('nombre')
-    tipo_dispositivo = request.json.get('tipo')
-    if not nombre_dispositivo or not tipo_dispositivo:
-        return jsonify({'mensaje': 'Nombre y tipo del dispositivo son necesarios'}), 400
-    device_manager.add_dispositivo(nombre_dispositivo, tipo_dispositivo, habitacion[0])
-    return jsonify({'mensaje': 'Dispositivo añadido'}), 201
-
-@app.route('/dispositivo/<dispositivo_id>', methods=['DELETE'])
-@jwt_required()
-@cross_origin()
-def eliminar_dispositivo(dispositivo_id):
-    device_manager.eliminar_dispositivo(dispositivo_id)
-    return jsonify({'mensaje': 'Dispositivo eliminado'}), 200
-
-@app.route('/casa-domotica/<nombre_habitacion>/dispositivos/<dispositivo_id>', methods=['PUT'])
-@jwt_required()
-def actualizar_nombre_dispositivo(nombre_habitacion, dispositivo_id):
+def manejar_dispositivos(username, nombre):
     try:
         usuario_id = get_jwt_identity()
-        nuevo_nombre = request.json.get('nuevo_nombre')
-        if not nuevo_nombre:
-            return jsonify({'mensaje': 'El nuevo nombre del dispositivo es necesario'}), 400
-        if device_manager.actualizar_nombre_dispositivo(usuario_id, nombre_habitacion, dispositivo_id, nuevo_nombre):
-            return jsonify({'mensaje': f'Nombre del dispositivo actualizado correctamente a {nuevo_nombre}'}), 200
+        if not usuario_id or not username:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+        if not nombre:
+            return jsonify({'error': 'Habitación no encontrada'}), 404
+        if request.method == 'GET':
+            habitaciones = room_manager.get_habitaciones(usuario_id)
+            habitacion = next((h for h in habitaciones if h[1] == nombre), None)
+            if habitacion:
+                dispositivos = room_manager.get_dispositivos_por_habitacion(habitacion[0])
+                return jsonify({'habitacion': habitacion, 'dispositivos': dispositivos}), 200
+            else:
+                return jsonify({'error': 'Habitación no encontrada'}), 404
+        elif request.method == 'POST':
+            habitacion = next((h for h in room_manager.get_habitaciones(usuario_id) if h[1] == nombre), None)
+            if not habitacion:
+                return jsonify({'error': 'Habitación no encontrada'}), 404
+            nombre = request.json.get('nombre')
+            tipo = request.json.get('tipo')
+            if not nombre or not tipo:
+                return jsonify({'error': 'Nombre y tipo del dispositivo son necesarios'}), 400
+            device_manager.add_dispositivo(nombre, tipo, habitacion[0])
+            return jsonify({'mensaje': 'Dispositivo añadido'}, nombre), 200
         else:
-            return jsonify({'mensaje': 'No se pudo actualizar el nombre del dispositivo. Verifique que tiene acceso al dispositivo y que el nuevo nombre no esté ya en uso.'}), 400
+            return jsonify({'error': 'Método no aceptado'}), 405
     except Exception as e:
-        return jsonify({'error': 'Ocurrió un error al actualizar el nombre del dispositivo'}), 500
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/usuarios/<username>/habitaciones/<nombre>/dispositivos/<dispositivo_id>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@jwt_required()
+@cross_origin()
+def manejar_dispositivo(username, nombre, dispositivo_id):
+    try:
+        usuario_id = get_jwt_identity()
+        if not usuario_id or not username:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+        if request.method == 'DELETE':
+            device_manager.eliminar_dispositivo(dispositivo_id)
+            return jsonify({'mensaje': 'Dispositivo eliminado'}), 200
+        elif request.method == 'PATCH':
+            nuevo_nombre = request.json.get('nuevo_nombre')
+            if not nuevo_nombre:
+                return jsonify({'error': 'El nuevo nombre del dispositivo es necesario'}), 400
+            if device_manager.actualizar_nombre_dispositivo(usuario_id, nombre, dispositivo_id, nuevo_nombre):
+                return jsonify({'mensaje': f'Nombre del dispositivo actualizado correctamente a {nuevo_nombre}'}), 201
+            else:
+                return jsonify({'error': 'No se pudo actualizar el nombre del dispositivo.'}), 401
+        else:
+            return jsonify({'error': 'Método no aceptado'}), 405
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5001)
+    socketio.run(app, port=5001)

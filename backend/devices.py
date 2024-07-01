@@ -7,7 +7,7 @@ class DeviceManager:
 
     def execute_query(self, query, parameters=[]):
         try:
-            self.conn = sqlite3.connect(self.db_file)
+            self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
             cursor = self.conn.cursor()
             if parameters:
                 cursor.execute(query, parameters)

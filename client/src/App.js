@@ -15,9 +15,9 @@ function App() {
           <Routes>
             <Route path="/" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
-            <Route path="/casa-domotica" element={<CasaDomotica />}/>
-            <Route path="/casa-domotica/:nombre" element={<Habitacion />} />
-            <Route path="/usuario/:username" element={<Usuario />} />
+            <Route path="/usuarios/:username/habitaciones" element={<CasaDomotica />}/>
+            <Route path="/usuarios/:username/habitaciones/:nombre/dispositivos" element={<Habitacion />} />
+            <Route path="/usuarios/:username" element={<Usuario />} />
           </Routes>
         </BrowserRouter>
     </div>

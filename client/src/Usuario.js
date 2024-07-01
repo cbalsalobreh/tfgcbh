@@ -5,16 +5,16 @@ import './Usuario.css';
 function Usuario() {
   const { username } = useParams();
   const [user, setUser] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log(`Fetching data for user: ${username}`);
     async function fetchUserData() {
         try {
-            const response = await fetch(`/usuario/${username}`, {
+            const response = await fetch(`/usuarios/${username}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
@@ -45,8 +45,8 @@ function Usuario() {
     }
 
     try {
-      const response = await fetch('/change_password', {
-        method: 'POST',
+      const response = await fetch(`/usuarios/${username}/password`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -55,21 +55,19 @@ function Usuario() {
       });
 
       if (!response.ok) {
-        throw new Error('Error al cambiar la contraseña');
+        throw new Error('Error al cambiar la contraseña. Por favor, inténtalo de nuevo.');
       }
-      setUser({ ...user, password: '********' });
+      setUser({ ...user});
       setNewPassword('');
       setConfirmPassword('');
-      setShowPassword(false);
-      setErrorMessage('');
+      setErrorMessage('Error al cambiar la contraseña. Por favor, inténtalo de nuevo.');
     } catch (error) {
-      console.error('Error al cambiar la contraseña:', error.message);
       setErrorMessage('Error al cambiar la contraseña. Por favor, inténtalo de nuevo.');
     }
   };
 
   const handleVolver = () => {
-    navigate('/casa-domotica');
+    navigate(`/usuarios/${username}/habitaciones`);
   };
 
   return (
@@ -79,12 +77,6 @@ function Usuario() {
         <h2>Información del Usuario</h2>
         <p>Usuario: {user.username}</p>
         <p>Email: {user.email}</p>
-        <p>
-          Contraseña: {showPassword ? user.password : '********'}{' '}
-          <button onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? 'Ocultar' : 'Mostrar'}
-          </button>
-        </p>
         <div>
           <h3>Cambiar Contraseña</h3>
           <input

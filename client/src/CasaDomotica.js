@@ -1,16 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import './CasaDomotica.css';
 import { useAudioRecorder } from 'react-audio-voice-recorder';
 import socketIOClient from 'socket.io-client';
 
 const ENDPOINT = 'http://localhost:5001';
-const socket = socketIOClient(ENDPOINT, {
-    extraHeaders: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`
-    }
-});
 
 function CasaDomotica() {
     const { startRecording, stopRecording, isRecording, recordingBlob } = useAudioRecorder();
@@ -20,7 +15,7 @@ function CasaDomotica() {
     const [dispositivo, setDispositivo] = useState('');
     const [estado, setEstado] = useState('');
     const [habitacion, setHabitacion] = useState('');
-    const [username, setUsername ] = useState('');
+    const { username } = useParams();
 
     const [habitaciones, setHabitaciones] = useState([]);
     const [tiposHabitaciones, setTiposHabitaciones] = useState([]);
@@ -34,45 +29,55 @@ function CasaDomotica() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        cargarHabitaciones();
-        cargarTiposHabitaciones();
-    }, []);
-
-    useEffect(() => {
-        async function fetchUserData() {
+        const cargarHabitaciones = async () => {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    console.error('Token no encontrado');
-                    return;
+                    throw new Error('Token de autenticación no encontrado');
                 }
-                
-                const response = await fetch(`/get_username`, {
-                    method: 'GET',
+                const response = await fetch(`/usuarios/${username}/habitaciones`, {
                     headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    'Authorization': `Bearer ${token}`,
+                    },
                 });
-                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                setHabitaciones(data.habitaciones);
+                } catch (error) {
+                console.error('Error al cargar habitaciones:', error);
+                }
+        };
+    
+        const cargarTiposHabitaciones = async () => {
+            try {
+                const response = await fetch(`/tipos-habitaciones`);
                 if (response.ok) {
-                    const userData = await response.json();
-                    setUsername(userData.username);
+                    const data = await response.json();
+                    setTiposHabitaciones(data.tipos_habitaciones);
                 } else {
-                    console.error('Error al obtener los datos del usuario');
+                    console.error('Error al cargar los tipos de habitaciones');
                 }
             } catch (error) {
-                console.error('Error al obtener los datos del usuario:', error);
+                console.error('Error al cargar los tipos de habitaciones:', error);
             }
-        }
-        fetchUserData();
-    }, []);
+        };
+        cargarHabitaciones();
+        cargarTiposHabitaciones();
+    }, [username]);
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        const socket = socketIOClient(ENDPOINT, {
+            extraHeaders: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
         const handleTranscription = (data) => {
             setTranscription(data);
         };
-
-        socket.on('transcription', handleTranscription);
 
         const handleEstadoDispositivo = (data) => {
             setDispositivo(data.dispositivo);
@@ -80,15 +85,9 @@ function CasaDomotica() {
             setHabitacion(data.habitacion);
         };
 
+        socket.on('transcription', handleTranscription);
         socket.on('estado_dispositivo', handleEstadoDispositivo);
 
-        return () => {
-            socket.off('transcription', handleTranscription);
-            socket.off('estado_dispositivo', handleEstadoDispositivo);
-        };
-    }, []);  
-
-    useEffect(() => {
         if (recordingBlob) {
             const reader = new FileReader();
             reader.readAsDataURL(recordingBlob);
@@ -104,76 +103,17 @@ function CasaDomotica() {
                 });
             };
         }
+
+        return () => {
+            socket.off('transcription', handleTranscription);
+            socket.off('estado_dispositivo', handleEstadoDispositivo);
+        };
     }, [recordingBlob]);
-
-    const cargarHabitaciones = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('Token de autenticación no encontrado');
-            }
-            const response = await fetch('/casa-domotica', {
-                headers: {
-                'Authorization': `Bearer ${token}`,
-                },
-            });
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
-            const data = await response.json();
-            setHabitaciones(data);
-            } catch (error) {
-            console.error('Error al cargar habitaciones:', error);
-            }
-    };
-
-    const cargarTiposHabitaciones = async () => {
-        try {
-            const response = await fetch('/tipos-habitaciones');
-            if (response.ok) {
-                const data = await response.json();
-                setTiposHabitaciones(data.tipos_habitaciones);
-            } else {
-                console.error('Error al cargar los tipos de habitaciones');
-            }
-        } catch (error) {
-            console.error('Error al cargar los tipos de habitaciones:', error);
-        }
-    };
 
     const handleAgregarHabitacion = async () => {
         let tipoHabitacionId = tipoHabitacion;
-    
-        if (tipoHabitacion === 'Otro' && tipoPersonalizado) {
-            try {
-                const tipoExistente = tiposHabitaciones.find(tipo => tipo.nombre === tipoPersonalizado);
-                if (tipoExistente) {
-                    tipoHabitacionId = tipoExistente.id;
-                } else {
-                    const response = await fetch('/tipos-habitaciones', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ nombre: tipoPersonalizado }),
-                    });
-    
-                    if (response.ok) {
-                        const data = await response.json();
-                        tipoHabitacionId = data.id;
-                    } else {
-                        console.error('Error al agregar el nuevo tipo de habitación');
-                        return;
-                    }
-                }
-            } catch (error) {
-                console.error('Error al agregar el nuevo tipo de habitación:', error);
-                return;
-            }
-        }
-    
         try {
-            const response = await fetch('/casa-domotica', {
+            const response = await fetch(`/usuarios/${username}/habitaciones`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -183,7 +123,8 @@ function CasaDomotica() {
             });
     
             if (response.ok) {
-                cargarHabitaciones();
+                const nuevaHabitacionData = await response.json(); 
+                setHabitaciones(prevHabitaciones => [...prevHabitaciones, nuevaHabitacionData]); // Actualizar el estado con la nueva habitación
                 setMostrarFormulario(false);
                 setNuevaHabitacion('');
                 setTipoHabitacion('');
@@ -195,19 +136,16 @@ function CasaDomotica() {
         }
     };    
 
-    async function handleActualizarHabitacion() {
+    const handleActualizarHabitacion = async () => {
         const nombreActual = habitaciones.find(hab => hab[0] === editarHabitacionId)?.[1];
         const nuevoNombre = nuevoNombreHabitacion;
-        console.log(nombreActual, nuevoNombre);
-    
         if (!nombreActual || !nuevoNombre) {
             console.error('Nombre actual o nuevo nombre no están disponibles.');
             return;
         }
-    
         try {
-            const response = await fetch(`/casa-domotica/${nombreActual}`, {
-                method: 'PUT',
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombreActual}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -217,11 +155,16 @@ function CasaDomotica() {
                     nuevo_nombre: nuevoNombre
                 })
             });
-    
             if (response.ok) {
+                const nuevasHabitaciones = habitaciones.map(hab => {
+                    if (hab[0] === editarHabitacionId) {
+                        return [editarHabitacionId, nuevoNombre, hab[2]];
+                    }
+                    return hab;
+                });
+                setHabitaciones(nuevasHabitaciones);
                 setEditarHabitacionId(null);
                 setNuevoNombreHabitacion('');
-                cargarHabitaciones();
             } else {
                 const errorData = await response.json();
                 console.error('Error al actualizar habitación', errorData);
@@ -231,23 +174,25 @@ function CasaDomotica() {
         }
     }
     
-    const handleEliminarHabitacion = async (id) => {
+    const handleEliminarHabitacion = async (nombre) => {
         try {
-            const response = await fetch(`/${id}`, {
+            const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
+    
             if (response.ok) {
-                cargarHabitaciones();
+                const nuevasHabitaciones = habitaciones.filter(hab => hab[1] !== nombre);
+                setHabitaciones(nuevasHabitaciones);
             } else {
                 console.error('Error al eliminar la habitación');
             }
         } catch (error) {
             console.error('Error al eliminar la habitación:', error);
         }
-    };
+    };    
 
     const handleAgregarClick = () => {
         setMostrarFormulario(true);
@@ -269,7 +214,7 @@ function CasaDomotica() {
     const handleLogout = async () => {
         try {
             const response = await fetch('/logout', {
-                method: 'POST',
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -286,13 +231,12 @@ function CasaDomotica() {
     };
 
     const handleHabitacionClick = (nombre) => {
-        navigate(`/casa-domotica/${nombre}`);
+        navigate(`/usuarios/${username}/habitaciones/${nombre}/dispositivos`);
     };
 
     const handleEditarClick = (id, nombre) => {
         setEditarHabitacionId(id);
         setNuevoNombreHabitacion(nombre);
-        cargarHabitaciones();
     };
 
     const handleCancelarEdicion = () => {
@@ -303,13 +247,13 @@ function CasaDomotica() {
     return (
         <div className="casadomotica-container">
             <header className="header">
-                <h5>Bienvenido <a href={`/usuario/${username}`}>@{username}</a> a las habitaciones de tu casa domótica</h5>
+                <h5>Bienvenido <a href={`/usuarios/${username}`}>@{username}</a> a las habitaciones de tu casa domótica</h5>
                 <button onClick={handleLogout} className="logout-button">Cerrar Sesión</button>
             </header>
             <ul className="habitaciones-list">
                 {habitaciones.length > 0 ? (
-                    habitaciones.map((habitacion) => (
-                        <li key={habitacion[0]} className="habitacion-item">
+                    habitaciones.map((habitacion, index) => (
+                        <li key={index} className="habitacion-item">
                             {editarHabitacionId === habitacion[0] ? (
                                 <div className="editar-habitacion-form">
                                     <input
@@ -324,7 +268,7 @@ function CasaDomotica() {
                                 <>
                                     <button onClick={() => handleHabitacionClick(habitacion[1])}>{habitacion[1]}</button>
                                     <button onClick={() => handleEditarClick(habitacion[0], habitacion[1])} className="editar-button">Editar</button>
-                                    <button onClick={() => handleEliminarHabitacion(habitacion[0])} className="delete-button">Eliminar</button>
+                                    <button onClick={() => handleEliminarHabitacion(habitacion[1])} className="delete-button">Eliminar</button>
                                 </>
                             )}
                         </li>
