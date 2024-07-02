@@ -25,6 +25,7 @@ regex==2024.5.10
 requests==2.31.0
 simple-websocket==1.0.0
 tiktoken==0.7.0
+Unidecode==0.04.12
 urllib3==2.2.1
 Werkzeug==3.0.3
 wsproto==1.2.0
