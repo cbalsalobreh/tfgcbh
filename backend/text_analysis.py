@@ -1,8 +1,7 @@
 import re
 from backend.database import DatabaseManager
-import spacy # type: ignore
-from backend.utils import obtener_participio
-from unidecode import unidecode # type: ignore
+import spacy
+from unidecode import unidecode
 
 class TextAnalyzer:
     def __init__(self, db_path):

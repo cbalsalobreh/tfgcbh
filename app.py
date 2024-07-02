@@ -9,7 +9,7 @@ import whisper
 from flask_cors import CORS, cross_origin
 import base64
 import tempfile
-from unidecode import unidecode # type: ignore
+from unidecode import unidecode
 from flask_wtf.csrf import generate_csrf
 from flask_jwt_extended import JWTManager, decode_token, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 from backend.devices import DeviceManager
