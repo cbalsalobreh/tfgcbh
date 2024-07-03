@@ -16,7 +16,7 @@ function Usuario() {
         try {
             const response = await fetch(`/usuarios/${username}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 }
             });
             if (!response.ok) {

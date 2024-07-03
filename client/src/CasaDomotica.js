@@ -244,10 +244,14 @@ function CasaDomotica() {
         setNuevoNombreHabitacion('');
     };
 
+    const handleNavigate = () => {
+        navigate(`/usuarios/${username}`);
+    };
+    
     return (
         <div className="casadomotica-container">
             <header className="header">
-                <h5>Bienvenido <a href={`/usuarios/${username}`}>@{username}</a> a las habitaciones de tu casa domótica</h5>
+                <h5>Bienvenido <span onClick={handleNavigate}>@{username}</span> a las habitaciones de tu casa domótica</h5>
                 <button onClick={handleLogout} className="logout-button">Cerrar Sesión</button>
             </header>
             <ul className="habitaciones-list">

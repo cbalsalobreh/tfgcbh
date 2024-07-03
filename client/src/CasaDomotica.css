@@ -27,6 +27,11 @@
     font-size: 1em;
     color: #333;
 }
+.header h5 span{
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
 
 /* Lista de habitaciones */
 .habitaciones-list {

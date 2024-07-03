@@ -2,21 +2,25 @@
 
 Clonar el repositorio y ejecutar los siguientes comandos:
 
-### `python3 -m venv venv`
-
-Se crea un entorno virtual para instalar las dependencias.
-
-### `source venv/bin/activate`
-
-Se activa el entorno virtual.
-
-### `python3.9 -m pip install -r requirements.txt`
+### `pip3 install -r requirements.txt`
 
 Se instalan las todas las dependencias.
 
-### `python -m spacy download es_core_news_sm`
+### `python3 -m spacy download es_core_news_sm`
 
 Se instala el modelo de spaCy.
+
+### `cd client`
+
+Se accede a la carpeta de cliente.
+
+### `npm install` y `npm run build`
+
+Se instalan las dependencias y se ejecutan el script de construcción del cliente
+
+### `cd ..`
+
+Se accede de nuevo al inicio.
 
 ### `python3 app.py`
 
