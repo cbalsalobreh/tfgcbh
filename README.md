@@ -10,7 +10,7 @@ Se crea un entorno virtual para instalar las dependencias.
 
 Se activa el entorno virtual.
 
-### `python3.9 -m pip install requirements.txt`
+### `python3.9 -m pip install -r requirements.txt`
 
 Se instalan las todas las dependencias.
 

@@ -330,6 +330,9 @@ __pycache__/
 # Flask Session Cache
 flask_session/
 
+# Venv
+venv/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
