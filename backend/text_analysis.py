@@ -1,14 +1,12 @@
 import re
 from backend.database import DatabaseManager
 import spacy
-import es_core_news_sm
 from unidecode import unidecode
 
 class TextAnalyzer:
     def __init__(self, db_path):
         self.db_path = db_path
         self.database_manager = DatabaseManager(db_path)
-        self.nlp = es_core_news_sm.load
         self.nlp = spacy.load('es_core_news_sm')
 
     def analyze_text(self, text, user_id):
