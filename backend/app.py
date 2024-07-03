@@ -1,13 +1,11 @@
 
 from datetime import timedelta
 import re
-import ssl
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
 from flask_socketio import SocketIO, disconnect
 import whisper
 from flask_cors import CORS, cross_origin
-from flask_ngrok import run_with_ngrok
 import base64
 import tempfile
 from unidecode import unidecode
@@ -34,10 +32,6 @@ jwt = JWTManager(app)
 
 # Configuración de Flask-Session
 Session(app)
-
-run_with_ngrok(app) 
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 audio_model = whisper.load_model("small")
 print("Cargado whisper")
