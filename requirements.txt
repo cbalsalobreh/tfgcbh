@@ -25,7 +25,6 @@ regex==2024.5.10
 requests==2.31.0
 simple-websocket==1.0.0
 spacy==3.7.5
-es-core-news-sm==3.7.0
 tiktoken==0.7.0
 Unidecode==0.04.12
 urllib3==2.2.1
