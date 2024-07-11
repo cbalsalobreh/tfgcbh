@@ -89,7 +89,7 @@ def handle_audio(audio_data):
         print("Cargado audio en whisper")
         transcript = audio_model.transcribe(audio, language='es')
         text_transcription = transcript['text']
-        texto_sin_comas = unidecode(re.sub(r'[^\w\s]', '', text_transcription))
+        texto_sin_comas = unidecode(re.sub(r'[^\w\sñÑ]', '', text_transcription))
         socketio.emit('transcription', texto_sin_comas)
         print("Transcripción emitida al cliente:", texto_sin_comas)
 

@@ -46,7 +46,7 @@ function Usuario() {
 
     try {
       const response = await fetch(`/usuarios/${username}/password`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
