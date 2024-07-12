@@ -30,6 +30,16 @@ class DatabaseManager:
 
 # Gestión de autentificación
 
+    def username_exists(self, username):
+        query = "SELECT COUNT(*) FROM users WHERE username = ?"
+        result = self.execute_query(query, (username,))
+        return result[0][0] > 0
+
+    def email_exists(self, email):
+        query = "SELECT COUNT(*) FROM users WHERE email = ?"
+        result = self.execute_query(query, (email,))
+        return result[0][0] > 0
+
     def save_user_to_database(self, username, email, password):
         # Genera un hash de la contraseña utilizando bcrypt
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())

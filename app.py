@@ -89,11 +89,11 @@ def handle_audio(audio_data):
         print("Cargado audio en whisper")
         transcript = audio_model.transcribe(audio, language='es')
         text_transcription = transcript['text']
-        texto_sin_comas = unidecode(re.sub(r'[^\w\sñÑ]', '', text_transcription))
-        socketio.emit('transcription', texto_sin_comas)
-        print("Transcripción emitida al cliente:", texto_sin_comas)
+        texto_limpio = unidecode(re.sub(r'[^\w\sñÑ]', '', text_transcription))
+        socketio.emit('transcription', texto_limpio)
+        print("Transcripción emitida al cliente:", texto_limpio)
 
-        habitacion, dispositivo = text_analyzer.analyze_text(texto_sin_comas, usuario_id)
+        habitacion, dispositivo = text_analyzer.analyze_text(texto_limpio, usuario_id)
         print('Texto analizado:', dispositivo, habitacion)
         if dispositivo and habitacion:
             estado = db_manager.get_estado_dispositivo(dispositivo, habitacion)
@@ -189,11 +189,13 @@ def login():
             redirect_url = f'/usuarios/{username}/habitaciones'
             if db_manager.check_credentials(username, password):
                 usuario_id = db_manager.get_user_id(username)
+                if not usuario_id:
+                    return jsonify({'error': 'No existe el usuario.'}), 400
                 expires = timedelta(days=30) if remember_me else timedelta(minutes=60)
                 access_token = create_access_token(identity=usuario_id, expires_delta=expires)
                 return jsonify(token=access_token, user_id=usuario_id, redirect=redirect_url), 200
             else:
-                return jsonify({'error': 'Credenciales incorrectas'}), 401
+                return jsonify({'error': 'Contraseña incorrecta.'}), 409
         else:
             return jsonify({'error': 'Método no aceptado'}), 405
     except Exception as e:
@@ -207,8 +209,18 @@ def register():
             username = data.get('registerUsername')
             email = data.get('registerEmail')
             password = data.get('registerPassword')
+            redirect_url = f'/usuarios/{username}/habitaciones'
+            existing_user = db_manager.username_exists(username)
+            existing_email = db_manager.email_exists(email)
+            if existing_user:
+                return jsonify({'message': 'El usuario ya está registrado'}), 400
+            if existing_email:
+                return jsonify({'mensaje': 'El email ya está registrado'}), 409
             db_manager.save_user_to_database(username, email, password)
-            return jsonify({'mensaje': 'Registro exitoso'}), 200
+            if db_manager.check_credentials(username, password):
+                usuario_id = db_manager.get_user_id(username)
+            access_token = create_access_token(identity=usuario_id)
+            return jsonify(token=access_token, user_id=usuario_id, redirect=redirect_url), 200
         else:
             return jsonify({'error': 'Método no aceptado'}), 405
     except Exception as e:

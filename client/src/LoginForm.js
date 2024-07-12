@@ -49,7 +49,13 @@ function LoginForm() {
                 localStorage.setItem('token', data.token);
                 navigate(data.redirect);
             } else {
-                setMessage(data.message || 'Inicio de sesión fallido');
+                if (response.status === 400){
+                    setMessage('No existe el usuario.');
+                } if (response.status === 409){
+                    setMessage('Contraseña incorrecta.');
+                } else {
+                    setMessage(data.message || 'Error al registrar usuario');
+                }
             }
         } catch (error) {
             console.error('Error al enviar la solicitud de inicio de sesión:', error);
