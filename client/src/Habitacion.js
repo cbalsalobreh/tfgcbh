@@ -5,7 +5,6 @@ import { useAudioRecorder } from 'react-audio-voice-recorder';
 import socketIOClient from 'socket.io-client';
 
 const ENDPOINT = 'http://localhost:5001';
-const socket = socketIOClient(ENDPOINT);
 
 function Habitacion() {
     const { startRecording, stopRecording, isRecording, recordingBlob } = useAudioRecorder();
@@ -75,24 +74,25 @@ function Habitacion() {
     }, [username, nombre, navigate]);
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        const socket = socketIOClient(ENDPOINT, {
+            extraHeaders: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
         const handleTranscription = (data) => {
             setTranscription(data);
         };
 
         socket.on('transcription', handleTranscription);
 
-        return () => {
-            socket.off('transcription', handleTranscription);
-        };
-    }, []);
-
-    useEffect(() => {
         if (recordingBlob && habitacion) {
             const reader = new FileReader();
             reader.readAsDataURL(recordingBlob);
             reader.onloadend = () => {
                 const base64Data = reader.result.split(',')[1];
-                socket.emit('audio_room', { audioData: base64Data, nombreHab: habitacion[1] });
+                socket.emit('audio_room', { audioData: base64Data , nombreHab: habitacion[1] });
                 
                 const newAudioUrl = URL.createObjectURL(recordingBlob);
                 setAudioUrl((prevAudioUrl) => {
@@ -103,9 +103,19 @@ function Habitacion() {
                 });
             };
         }
-    }, [recordingBlob, habitacion]);    
+
+        return () => {
+            socket.off('transcription', handleTranscription);
+        };
+    }, [recordingBlob, habitacion]); 
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        const socket = socketIOClient(ENDPOINT, {
+            extraHeaders: {
+                Authorization: `Bearer ${token}`
+            }
+        });
         socket.on('actualizar_estado', (data) => {
             console.log(data)
             setDispositivos((prevDispositivos) => 

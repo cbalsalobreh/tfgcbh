@@ -110,8 +110,11 @@ def handle_audio(audio_data):
 @socketio.on('audio_room')
 def handle_audio(data):
     audio_data = data.get('audioData')
-    nombre_hab = data.get('nombreHab')
+    habitacion = data.get('nombreHab')
+    token = obtener_token_de_la_solicitud()
+
     try:
+        usuario_id = get_user_id_from_token(token)
         audio_bytes = base64.b64decode(audio_data)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
             temp_audio_file.write(audio_bytes)
@@ -120,11 +123,11 @@ def handle_audio(data):
         print("Cargado audio en whisper")
         transcript = audio_model.transcribe(audio, language='es')
         text_transcription = transcript['text']
-        texto_limpio = re.sub(r'[^\w\sñÑ]', '', text_transcription)
+        texto_limpio = unidecode(re.sub(r'[^\w\sñÑ]', '', text_transcription))
         socketio.emit('transcription', texto_limpio)
         print("Transcripción emitida al cliente:", texto_limpio)
 
-        dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_limpio, nombre_hab)
+        dispositivo, nuevo_estado = text_analyzer.analyze_device(texto_limpio, usuario_id, habitacion)
         print(dispositivo, nuevo_estado)
         if dispositivo and nuevo_estado:
                 print('Estado del dispositivo actualizado:', dispositivo, nuevo_estado)

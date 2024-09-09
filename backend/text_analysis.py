@@ -48,13 +48,12 @@ class TextAnalyzer:
 
         return habitacion, dispositivo
 
-    def analyze_device(self, text, nombre_hab):        
+    def analyze_device(self, text, user_id, habitacion):        
         doc = self.nlp(text)
-        habitacion_id = self.database_manager.get_id_habitacion(nombre_hab)
-        dispositivos = self.database_manager.get_nombre_dispositivos_habitacion(habitacion_id)
-
-        dispositivos = [dispositivo.lower() for dispositivo in dispositivos]
-        print(f'Habitación ID: {habitacion_id}, Dispositivos: {dispositivos}')
+        dispositivos = self.database_manager.get_dispositivos_por_usuario(user_id)
+        print(f'Dispositivos: {dispositivos}')
+        dispositivos = [unidecode(dispositivo.lower()) for dispositivo in dispositivos]
+        print(f'Dispositivos: {dispositivos}')
 
         dispositivo = None
         accion = None
@@ -74,6 +73,10 @@ class TextAnalyzer:
         if dispositivo:
             dispositivo_id = self.database_manager.get_tipo_dispositivo_id(dispositivo)
             dispositivo_id_int = dispositivo_id[0]
+            disp_id = self.database_manager.get_dispositivo_id(dispositivo, habitacion, user_id)
+            print(f'Dispositivo ID: ', disp_id)
+            habitacion_id = self.database_manager.get_id_habitacion(disp_id)
+            print(f'Habitación ID: ', habitacion_id)
             acciones_por_dispositivo = self.database_manager.get_acciones_permitidas(dispositivo_id_int)
 
             for i in range(len(tokens)):
@@ -107,7 +110,10 @@ class TextAnalyzer:
                 if "grados" in text:
                     estado = re.search(r'\d+ grados', text).group()
                 elif numeros_detectados:
-                    estado = f"{numeros_detectados[0]}"
+                    if "menos" in text or "-" in text:
+                        estado = f"-{numeros_detectados[0]}"
+                    else:
+                        estado = f"{numeros_detectados[0]}"
                 else:
                     estado = None
             # Para lo demás
@@ -115,7 +121,8 @@ class TextAnalyzer:
                 estado = self.database_manager.get_estado_por_accion(accion)[0]
             
             print(f'Dispositivo encontrado: {dispositivo}, Estado: {estado}, Acción: {accion}')
-            self.database_manager.actualizar_estado_dispositivo(dispositivo, estado, habitacion_id)            
+            self.database_manager.actualizar_estado_dispositivo(estado, dispositivo, habitacion_id)            
+            print(f"Actualizando dispositivo: {dispositivo}, acción: {accion}, habitación: {habitacion_id}")
             return dispositivo, estado
 
         print(f'Dispositivo o acción no encontrado. Dispositivo: {dispositivo}, Acción: {accion}')

@@ -10,7 +10,7 @@ import Usuario from './Usuario';
 function App() {
   return (
     <div className="App">
-      <img src="/CabeceraPWTFG.png" alt='Cabecera de Whisper Living' style={{ height: '150px', width: '100%', grid: 'flex' }}/>
+      <img src="/CabeceraPWTFG.png" alt='Cabecera de Whisper Living' />
       <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginForm />} />

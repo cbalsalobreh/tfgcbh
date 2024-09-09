@@ -92,15 +92,10 @@ class DatabaseManager:
         result = self.execute_query(query, (user_id,))
         return [dispositivo[0].lower() for dispositivo in result]
     
-    def get_id_habitacion(self, habitacion):
-        query = "SELECT id FROM habitaciones WHERE nombre = ?"
-        result_id = self.execute_query(query, (habitacion,))
+    def get_id_habitacion(self, id_disp):
+        query = "SELECT habitacion_id FROM dispositivos WHERE id = ?"
+        result_id = self.execute_query(query, (id_disp,))
         return result_id[0][0] if result_id else None
-    
-    def get_nombre_dispositivos_habitacion(self, hab_id):
-        query = "SELECT nombre FROM dispositivos WHERE habitacion_id = ?"
-        result = self.execute_query(query, (hab_id,))
-        return [dispositivo[0].lower() for dispositivo in result]
 
     def get_estado_dispositivo(self, dispositivo, habitacion):
         query = '''
@@ -111,10 +106,17 @@ class DatabaseManager:
         result = self.execute_query(query, (dispositivo, habitacion))
         return result[0] if result else None
 
-    def get_dispositivo_id(self, dispositivo):
-        query = "SELECT id FROM dispositivos WHERE nombre = ?"
-        result = self.execute_query(query, (dispositivo,))
+    def get_dispositivo_id(self, dispositivo, habitacion, usuario_id):
+        query = """
+            SELECT dispositivos.id 
+            FROM dispositivos 
+            JOIN habitaciones ON dispositivos.habitacion_id = habitaciones.id 
+            JOIN users ON habitaciones.usuario_id = users.id 
+            WHERE dispositivos.nombre = ? AND habitaciones.nombre = ? AND users.id = ?
+        """
+        result = self.execute_query(query, (dispositivo, habitacion, usuario_id))
         return result[0][0] if result else None
+
     
     def get_tipo_dispositivo_id(self, dispositivo):
         # Consulta para obtener el tipo y habitacion_id del dispositivo
@@ -151,6 +153,7 @@ class DatabaseManager:
         result = self.execute_query(query, (accion,))
         return result[0] if result else None
 
-    def actualizar_estado_dispositivo(self, dispositivo, accion, habitacion_id):
+    def actualizar_estado_dispositivo(self, accion, dispositivo, habitacion_id):
         query = "UPDATE dispositivos SET estado = ? WHERE nombre = ? AND habitacion_id = ?"
+        print(f"Actualizando dispositivo: {dispositivo}, acción: {accion}, habitación: {habitacion_id}")
         self.execute_query(query, (accion, dispositivo, habitacion_id))

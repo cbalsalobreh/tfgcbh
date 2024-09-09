@@ -38,12 +38,14 @@ function RegisterForm() {
         // Validar formato de correo electrónico
         if (!validateEmail(registerEmail)) {
             setErrorMessage('Por favor, introduce un correo electrónico válido.');
+            setIsLoading(false);
             return;
         }
         // Validar seguridad de contraseña
         const passwordValidationResult = validatePassword(registerPassword);
         if (passwordValidationResult !== "La contraseña es válida.") {
             setErrorMessage(passwordValidationResult);
+            setIsLoading(false);
             return;
         }
         // Enviar datos de registro al servidor
@@ -68,11 +70,11 @@ function RegisterForm() {
                 } else {
                     setErrorMessage(data.message || 'Error al registrar usuario');
                 }
+                setIsLoading(false);
             }
         } catch (error) {
             console.error('Error al enviar la solicitud de registro:', error);
             setErrorMessage('Error de conexión al registrar usuario');
-        } finally {
             setIsLoading(false);
         }
     };
