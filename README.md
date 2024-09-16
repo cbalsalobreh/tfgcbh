@@ -1,8 +1,22 @@
 # Manual de arranque de proyecto
 
+## Requisitos previos:
+
+Tener Python 3.9 o mayor y pip instalados para ejecutar y poder instalar dependencias.
+
+## Instrucciones para ejecutar en local:
+
 Clonar el repositorio y ejecutar los siguientes comandos:
 
-### `pip3 install -r requirements.txt`
+### `python3 -m venv myenv``
+
+Se crea un entorno virtual para instalar y ejecutar las dependencias y la aplicación web.
+
+### `source myenv/bin/activate`
+
+Se activa el entorno virtual
+
+### `pip install -r requirements.txt`
 
 Se instalan las todas las dependencias.
 
