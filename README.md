@@ -8,7 +8,7 @@ Tener Python 3.9 o mayor y pip instalados para ejecutar y poder instalar depende
 
 Clonar el repositorio y ejecutar los siguientes comandos:
 
-### `python3 -m venv myenv``
+### `python3 -m venv myenv`
 
 Se crea un entorno virtual para instalar y ejecutar las dependencias y la aplicación web.
 
