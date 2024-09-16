@@ -158,13 +158,8 @@ function Habitacion() {
     };
 
     const agregarDispositivo = async (e) => {
-        e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            if (!token) {
-                console.error('Token de autenticación no encontrado');
-                return;
-            }
 
             const response = await fetch(`/usuarios/${username}/habitaciones/${nombre}/dispositivos`, {
                 method: 'POST',

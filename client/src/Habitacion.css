@@ -9,7 +9,8 @@
 }
 
 .habitacion-container h2 {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    margin-top: 60px;
     color: #333;
 }
 
@@ -70,6 +71,7 @@
 
 .habitacion-container .delete-button {
     background-color: #e74c3c;
+    width: 200px;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -87,6 +89,7 @@
 
 .habitacion-container .back-button {
     margin-bottom: 20px;
+    width: 200px;
     padding: 10px 20px;
     font-size: 16px;
     background-color: #3498db;
