@@ -4,7 +4,8 @@
 
 ### LINUX / MAC
 
-Para ejecutar el proyecto en Linux, Mac o Windows, es importante cumplir con algunos requisitos previos. 
+Para ejecutar el proyecto en Linux, Mac o Windows, es importante cumplir con algunos requisitos previos.
+Se requiere de mínimo 4GB de RAM y 15GB de espacio en almacenamiento.
 En el caso de Linux/Mac, primero debes tener Python 3.x instalado. 
 Puedes verificar si está disponible ejecutando 
 
