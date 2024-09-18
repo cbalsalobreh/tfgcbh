@@ -17,7 +17,7 @@ En Ubuntu o Debian, ejecuta
 
 mientras que en macOS puedes instalarlo usando
 
-### `brew install python3``
+### `brew install python3`
 
 También necesitas pip, el gestor de paquetes de Python, que generalmente viene con Python 3, 
 pero puedes asegurarte de tener la última versión ejecutando.
@@ -78,7 +78,8 @@ Se activa el entorno virtual (Linux/Mac o Windows, respectivamente).
 
 Se instalan las todas las dependencias. Habrá que esperar unos minutos.
 
-### `python3 -m spacy download es_core_news_sm`(Linux/Mac) o `python -m spacy download es_core_news_sm`(Windows)
+### `python3 -m spacy download es_core_news_sm`(Linux/Mac) 
+### o `python -m spacy download es_core_news_sm`(Windows)
 
 Se instala el modelo de spaCy.
 
@@ -94,7 +95,7 @@ Se instalan las dependencias y se ejecuta el script de construcción del cliente
 
 Se accede de nuevo al inicio.
 
-### `python3 app.py`(Linux/Mac) o `python app.py`
+### `python3 app.py`(Linux/Mac) o `python app.py`(Windows)
 
 Se ejecuta el servidor para que esté disponible.
 Abrir [http://127.0.0.1:5001](http://127.0.0.1:5001) en el navegador para probar la aplicación en la web.
